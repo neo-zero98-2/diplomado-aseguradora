@@ -49,3 +49,7 @@ El espacio de trabajo instala dos skills que invoca el usuario en `.agents/skill
 - `/spec-impl <NN-nombre-spec>` — implementa una spec solo si su estado es "Aprobado"; crea y cambia a una rama git con el nombre de la spec (configurable en `specs/.spec-config.yml`, `AutoCreateBranch`) e implementa paso a paso, con pausas para revisar los diffs.
 
 Se espera que las funcionalidades grandes pasen por `/spec` antes de implementarse.
+
+
+## mcp
+ai vas a realizar cambios en el front o de la ui asegurate de revisarlas con playwrigth

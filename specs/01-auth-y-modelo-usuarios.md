@@ -1,6 +1,6 @@
 # SPEC 01 — Autenticación con Supabase y modelo de datos de asegurados/aseguradores
 
-> **Status:** Borrador
+> **Status:** Aprovado
 > **Depends on:** Ninguna (primera spec del proyecto)
 > **Date:** 2026-09-26
 > **Objective:** Implementar el login (correo o idContrato/idEmpleado + contraseña) contra Supabase Auth, con las tablas de perfil de asegurados y aseguradores, un endpoint de backend que resuelve la autenticación, y la pantalla de login en React que redirige a una ruta protegida placeholder tras iniciar sesión.
