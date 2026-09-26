@@ -1,10 +1,8 @@
+import LoginPage from './pages/LoginPage.tsx'
 
+// Temporal: las rutas /login y /home se configuran en el Paso 8
 function App() {
-
-  return (
-    <h1>Hola mundo</h1>
-     
-  )
+  return <LoginPage />
 }
 
 export default App
