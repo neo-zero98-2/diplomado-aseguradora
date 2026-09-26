@@ -1,6 +1,6 @@
 # SPEC 01 — Autenticación con Supabase y modelo de datos de asegurados/aseguradores
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** Ninguna (primera spec del proyecto)
 > **Date:** 2026-09-26
 > **Objective:** Implementar el login (correo o idContrato/idEmpleado + contraseña) contra Supabase Auth, con las tablas de perfil de asegurados y aseguradores, un endpoint de backend que resuelve la autenticación, y la pantalla de login en React que redirige a una ruta protegida placeholder tras iniciar sesión.
@@ -85,17 +85,17 @@ interface LoginResponse {
 
 ## Acceptance criteria
 
-- [ ] Las tablas `asegurados` y `aseguradores` existen en Supabase con RLS habilitado.
-- [ ] `POST /auth/login` con correo y contraseña válidos de un asegurado responde 200 con `accessToken`, `refreshToken` y `perfil.rol = "asegurado"`.
-- [ ] `POST /auth/login` con `id_contrato` (en vez de correo) y la misma contraseña responde igual que con correo.
-- [ ] `POST /auth/login` con `id_empleado` y contraseña válidos de un asegurador responde 200 con `perfil.rol = "asegurador"`.
-- [ ] `POST /auth/login` de un asegurado con `fechaVencimiento` pasada responde 403 y no genera sesión.
-- [ ] `POST /auth/login` con contraseña incorrecta responde 401.
-- [ ] La pantalla de login en React coincide con `references/ui/login.png` (correo/idUsuario, contraseña, botón Aceptar).
-- [ ] Tras un login exitoso, la sesión queda en el store de Redux, persistida en `localStorage`, y el navegador redirige a `/home` mostrando `"Bienvenido, {nombre}"`.
-- [ ] Recargar `/home` con una sesión guardada en `localStorage` mantiene al usuario autenticado (no redirige a `/login`).
-- [ ] Acceder a `/home` sin sesión redirige a `/login`.
-- [ ] `npm run lint` y `npm run build` pasan sin errores en `back-uatx-crud` y en `front-uatx-crud`.
+- [x] Las tablas `asegurados` y `aseguradores` existen en Supabase con RLS habilitado.
+- [x] `POST /auth/login` con correo y contraseña válidos de un asegurado responde 200 con `accessToken`, `refreshToken` y `perfil.rol = "asegurado"`.
+- [x] `POST /auth/login` con `id_contrato` (en vez de correo) y la misma contraseña responde igual que con correo.
+- [x] `POST /auth/login` con `id_empleado` y contraseña válidos de un asegurador responde 200 con `perfil.rol = "asegurador"`.
+- [x] `POST /auth/login` de un asegurado con `fechaVencimiento` pasada responde 403 y no genera sesión.
+- [x] `POST /auth/login` con contraseña incorrecta responde 401.
+- [x] La pantalla de login en React coincide con `references/ui/login.png` (correo/idUsuario, contraseña, botón Aceptar).
+- [x] Tras un login exitoso, la sesión queda en el store de Redux, persistida en `localStorage`, y el navegador redirige a `/home` mostrando `"Bienvenido, {nombre}"`.
+- [x] Recargar `/home` con una sesión guardada en `localStorage` mantiene al usuario autenticado (no redirige a `/login`).
+- [x] Acceder a `/home` sin sesión redirige a `/login`.
+- [x] `npm run lint` y `npm run build` pasan sin errores en `back-uatx-crud` y en `front-uatx-crud`.
 
 ## Decisions
 
