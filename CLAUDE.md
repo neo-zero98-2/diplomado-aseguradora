@@ -6,7 +6,7 @@ Este archivo proporciona orientación a Claude Code (claude.ai/code) al trabajar
 
 Espacio de trabajo para una aplicación CRUD ("uatx-crud") dividida en dos proyectos npm independientes. No hay un `package.json` en la raíz; ejecuta los comandos dentro de cada subproyecto. Ambos están recién generados: todavía no se ha implementado la lógica de negocio.
 
-- `back-uatx-crud/` — API en NestJS 12 (TypeScript, ESM). Tiene su propio repositorio git (aún sin commits).
+- `back-uatx-crud/` — API en NestJS 12 (TypeScript, ESM).
 - `front-uatx-crud/` — SPA en React 19 + Vite 8 + MUI 9 (Emotion) (TypeScript).
 - `references/ui/` — maquetas de la interfaz (`login.png`, `pantalla inicio.png`) que se deben seguir al construir las pantallas del frontend.
 - `.mcp.json` — servidor MCP de Supabase vinculado al proyecto `zqzqjtwmanroqcuhqois`; Supabase es la base de datos/servicio backend previsto. Revisa las tablas existentes antes de hacer cambios de esquema.
