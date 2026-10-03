@@ -62,6 +62,10 @@ npm run preview
 ```
 El frontend no tiene configurado ningún ejecutor de pruebas; los cambios de UI se verifican con Playwright (ver abajo).
 
+## Despliegue (Railway)
+
+Solo el backend se despliega en Railway, desde GitHub. La configuración está en `back-uatx-crud/railway.json`: Railpack con Node 24 (`engines` en `package.json`), `npm run build` y luego `npm run start:prod`, con healthcheck en `GET /`. En el servicio de Railway hay que poner **Root Directory** = `/back-uatx-crud` y **Config file path** = `/back-uatx-crud/railway.json`. Las variables son las del `.env.example`, excepto `PORT`, que la inyecta Railway. `CORS_ORIGIN` debe ser la URL del frontend desplegado.
+
 ## Convenciones del backend
 
 - El paquete es `"type": "module"` con `module: nodenext`: **las importaciones relativas deben incluir la extensión `.js`** (p. ej. `import { AppService } from './app.service.js'`). `main.ts` usa `await` de nivel superior.
