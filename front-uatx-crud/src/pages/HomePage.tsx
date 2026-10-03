@@ -1,13 +1,14 @@
 import { Box, Button, Stack } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
-import ChatAccidente from '../accidentes/ChatAccidente.tsx'
+import ChatFlotante from '../accidentes/ChatFlotante.tsx'
 import AppHeader from '../components/AppHeader.tsx'
 import BotonLlamar911 from '../components/BotonLlamar911.tsx'
 import DatosPersonales from '../components/DatosPersonales.tsx'
 import { useAppSelector } from '../store/index.ts'
 
-// Disposición de references/ui/pantalla inicio.png. El asegurado ve tres
-// columnas (datos personales, botón 911 y chat); el asegurador, sin chat, dos
+// Dos columnas para ambos roles: "Datos personales" a la izquierda y, a la
+// derecha, los botones arriba y la tabla de accidentes debajo. El chat del
+// asegurado es un botón flotante en la esquina inferior derecha
 function HomePage() {
   const perfil = useAppSelector((state) => state.auth.perfil)
   const navigate = useNavigate()
@@ -21,38 +22,43 @@ function HomePage() {
       <AppHeader />
       <Box
         sx={{
-          maxWidth: esAsegurado ? 1200 : 960,
+          maxWidth: 1280,
           mx: 'auto',
           p: { xs: 2, md: 4 },
+          // Deja libre el alto del botón flotante para que no tape la tabla
+          pb: esAsegurado ? 12 : { xs: 2, md: 4 },
           display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            md: esAsegurado ? '280px 1fr 380px' : '320px 1fr',
-          },
+          gridTemplateColumns: { xs: '1fr', md: '320px 1fr' },
           gap: { xs: 3, md: 4 },
           alignItems: 'start',
         }}
       >
         <DatosPersonales perfil={perfil} />
-        <Stack spacing={2} sx={{ maxWidth: { md: 360 } }}>
-          <BotonLlamar911 />
-          {perfil.rol === 'asegurador' && (
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={() => navigate('/asegurados')}
-            >
-              Administrar asegurados
-            </Button>
-          )}
+        {/* minWidth 0 deja que la tabla haga scroll dentro de la columna */}
+        <Stack spacing={3} sx={{ minWidth: 0 }}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            sx={{ maxWidth: { sm: 640 } }}
+          >
+            <Box sx={{ flex: 1 }}>
+              <BotonLlamar911 />
+            </Box>
+            {perfil.rol === 'asegurador' && (
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={() => navigate('/asegurados')}
+                sx={{ flex: 1 }}
+              >
+                Administrar asegurados
+              </Button>
+            )}
+          </Stack>
+          {/* Aquí va la tabla de accidentes (pasos 11 y 12) */}
         </Stack>
-        {/* En la maqueta el chat arranca un poco más abajo que el botón 911 */}
-        {esAsegurado && (
-          <Box sx={{ mt: { md: 6 }, height: { xs: 480, md: 560 } }}>
-            <ChatAccidente />
-          </Box>
-        )}
       </Box>
+      {esAsegurado && <ChatFlotante />}
     </>
   )
 }
