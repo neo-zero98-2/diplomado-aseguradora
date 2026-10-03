@@ -1,5 +1,6 @@
 import { Avatar, Box, Paper, Stack, Typography } from '@mui/material'
 import type { Perfil } from '../auth/types.ts'
+import { formatearFecha } from '../utils/fechas.ts'
 
 // Iniciales del nombre y del primer apellido: "María López" -> "ML"
 function iniciales(nombre: string) {
@@ -9,12 +10,6 @@ function iniciales(nombre: string) {
     .slice(0, 2)
     .map((parte) => parte[0]?.toUpperCase() ?? '')
     .join('')
-}
-
-// 'YYYY-MM-DD' -> 'DD/MM/YYYY' sin pasar por Date (evita el desfase de zona horaria)
-function formatearFecha(fecha: string) {
-  const [anio, mes, dia] = fecha.split('-')
-  return `${dia}/${mes}/${anio}`
 }
 
 function filasDe(perfil: Perfil): [string, string][] {
