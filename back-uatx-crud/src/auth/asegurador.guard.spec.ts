@@ -44,8 +44,11 @@ function crearSupabaseFalso() {
   return supabase as unknown as SupabaseService;
 }
 
-function contextoCon(authorization?: string): ExecutionContext {
-  const request = { headers: authorization ? { authorization } : {} };
+function contextoCon(
+  authorization?: string,
+  request: Record<string, any> = {},
+): ExecutionContext {
+  request.headers = authorization ? { authorization } : {};
   return {
     switchToHttp: () => ({ getRequest: () => request }),
   } as unknown as ExecutionContext;
@@ -82,9 +85,12 @@ describe('AseguradorGuard', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it('permite el token de un asegurador', async () => {
+  it('permite el token de un asegurador y deja su id en la petición', async () => {
+    const request: Record<string, any> = {};
+
     await expect(
-      guard.canActivate(contextoCon('Bearer token-asegurador')),
+      guard.canActivate(contextoCon('Bearer token-asegurador', request)),
     ).resolves.toBe(true);
+    expect(request.aseguradorId).toBe('uuid-asegurador');
   });
 });

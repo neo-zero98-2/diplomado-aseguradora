@@ -7,8 +7,13 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 
+// Petición que ya pasó por AseguradorGuard: trae el id del asegurador del token
+export interface PeticionAsegurador {
+  aseguradorId: string;
+}
+
 // Permite el paso solo a peticiones con un access token válido de Supabase
-// cuyo usuario exista en la tabla aseguradores
+// cuyo usuario exista en la tabla aseguradores; deja su id en request.aseguradorId
 @Injectable()
 export class AseguradorGuard implements CanActivate {
   constructor(private readonly supabase: SupabaseService) {}
@@ -34,6 +39,7 @@ export class AseguradorGuard implements CanActivate {
       throw new ForbiddenException('Solo un asegurador puede hacer esto');
     }
 
+    request.aseguradorId = asegurador.id;
     return true;
   }
 }
