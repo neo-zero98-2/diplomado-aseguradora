@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import {
   Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
   IconButton,
@@ -15,8 +16,20 @@ import {
 import { ApiError } from '../api/peticion.ts'
 import { useSesionExpirada } from '../auth/useSesionExpirada.ts'
 import { useAppSelector } from '../store/index.ts'
-import { consultarAccidentes } from './api.ts'
-import type { AccidenteMencionado, MensajeChat } from './types.ts'
+import { formatearFechaHora } from '../utils/fechas.ts'
+import {
+  actualizarAccidente,
+  consultarAccidentes,
+  obtenerAccidente,
+} from './api.ts'
+import DetalleAccidenteDialog from './DetalleAccidenteDialog.tsx'
+import { COLOR_ESTADO, ETIQUETA_ESTADO } from './estados.ts'
+import type {
+  AccidenteAsegurador,
+  AccidenteMencionado,
+  ActualizarAccidenteDto,
+  MensajeChat,
+} from './types.ts'
 
 // Lo que se muestra en el chat; al backend solo viajan rol y texto
 interface MensajeVisible extends MensajeChat {
@@ -37,6 +50,8 @@ const SUGERENCIAS = [
 const MAXIMO_CARACTERES = 2000
 
 const ERROR_ASISTENTE = 'No se pudo contactar al asistente, inténtalo de nuevo'
+const ERROR_NO_EXISTE = 'El accidente ya no existe'
+const ERROR_DETALLE = 'No se pudo abrir el accidente, inténtalo de nuevo'
 
 function IconoEnviar() {
   return (
@@ -61,19 +76,27 @@ function aHistorial(mensajes: MensajeVisible[]): MensajeChat[] {
 interface ChatAseguradorProps {
   // Se dibuja a la derecha del encabezado (p. ej. el botón para cerrar el chat)
   accionEncabezado?: ReactNode
+  // Se llama al guardar un cambio desde el detalle (p. ej. para recargar la tabla)
+  onAccidenteActualizado?: () => void
 }
 
 // Chat de solo lectura del asegurador: pregunta por los accidentes y Gemini
 // responde con datos que el backend consulta. La conversación vive solo aquí:
 // se manda completa en cada turno y recargar la página la reinicia. Ocupa todo
 // el alto de su contenedor
-function ChatAsegurador({ accionEncabezado }: ChatAseguradorProps) {
+function ChatAsegurador({
+  accionEncabezado,
+  onAccidenteActualizado,
+}: ChatAseguradorProps) {
   const token = useAppSelector((state) => state.auth.accessToken)
   const manejarSesionExpirada = useSesionExpirada()
   const [mensajes, setMensajes] = useState<MensajeVisible[]>([])
   const [texto, setTexto] = useState('')
   const [escribiendo, setEscribiendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Accidente que se está pidiendo con "Ver" y el que está abierto en el detalle
+  const [abriendoId, setAbriendoId] = useState<string | null>(null)
+  const [detalle, setDetalle] = useState<AccidenteAsegurador | null>(null)
   const finRef = useRef<HTMLDivElement>(null)
   const campoRef = useRef<HTMLInputElement>(null)
 
@@ -124,6 +147,52 @@ function ChatAsegurador({ accionEncabezado }: ChatAseguradorProps) {
   function enviar(evento: FormEvent) {
     evento.preventDefault()
     void preguntar(texto)
+  }
+
+  // Pide el accidente completo, con datos frescos, y abre el detalle
+  async function ver(id: string) {
+    if (!token || abriendoId) return
+    setError(null)
+    setAbriendoId(id)
+    try {
+      setDetalle(await obtenerAccidente(token, id))
+    } catch (e) {
+      if (manejarSesionExpirada(e)) return
+      setError(
+        e instanceof ApiError && e.status === 404
+          ? ERROR_NO_EXISTE
+          : ERROR_DETALLE,
+      )
+    } finally {
+      setAbriendoId(null)
+    }
+  }
+
+  // Un 401 cierra la sesión; cualquier error se relanza para que el diálogo
+  // muestre el mensaje sin cerrarse
+  async function guardarCambios(id: string, dto: ActualizarAccidenteDto) {
+    if (!token) return
+    try {
+      const actualizado = await actualizarAccidente(token, id, dto)
+      setDetalle(actualizado)
+      // El estado nuevo también se ve en las listas "Ver" del chat
+      setMensajes((lista) =>
+        lista.map((mensaje) =>
+          mensaje.accidentes?.some((a) => a.id === id)
+            ? {
+                ...mensaje,
+                accidentes: mensaje.accidentes.map((a) =>
+                  a.id === id ? { ...a, estado: actualizado.estado } : a,
+                ),
+              }
+            : mensaje,
+        ),
+      )
+      onAccidenteActualizado?.()
+    } catch (err) {
+      manejarSesionExpirada(err)
+      throw err
+    }
   }
 
   // Vuelve al saludo y a las sugerencias
@@ -204,7 +273,16 @@ function ChatAsegurador({ accionEncabezado }: ChatAseguradorProps) {
           </Stack>
         )}
         {mensajes.map((mensaje, indice) => (
-          <Burbuja key={indice} mensaje={mensaje} />
+          <Stack key={indice} spacing={1}>
+            <Burbuja mensaje={mensaje} />
+            {!!mensaje.accidentes?.length && (
+              <ListaAccidentes
+                accidentes={mensaje.accidentes}
+                abriendoId={abriendoId}
+                onVer={(id) => void ver(id)}
+              />
+            )}
+          </Stack>
         ))}
         {escribiendo && (
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -262,7 +340,80 @@ function ChatAsegurador({ accionEncabezado }: ChatAseguradorProps) {
           <IconoEnviar />
         </IconButton>
       </Box>
+
+      {/* Se monta después del panel flotante, así que queda encima de él */}
+      {detalle && (
+        <DetalleAccidenteDialog
+          key={detalle.id}
+          accidente={detalle}
+          onCerrar={() => setDetalle(null)}
+          onGuardar={(dto) => guardarCambios(detalle.id, dto)}
+        />
+      )}
     </Paper>
+  )
+}
+
+interface ListaAccidentesProps {
+  accidentes: AccidenteMencionado[]
+  abriendoId: string | null
+  onVer: (id: string) => void
+}
+
+// Accidentes que menciona una respuesta, con el botón "Ver" para abrir su detalle
+function ListaAccidentes({ accidentes, abriendoId, onVer }: ListaAccidentesProps) {
+  return (
+    <Stack
+      component="ul"
+      aria-label="Accidentes mencionados"
+      spacing={1}
+      sx={{ listStyle: 'none', m: 0, p: 0, maxWidth: '85%' }}
+    >
+      {accidentes.map((accidente) => (
+        <Paper
+          key={accidente.id}
+          component="li"
+          variant="outlined"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            px: 1.5,
+            py: 1,
+          }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+              {accidente.aseguradoNombre}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" component="p">
+              {accidente.vehiculoPlacas} ·{' '}
+              {formatearFechaHora(accidente.fechaHoraAccidente)}
+            </Typography>
+            <Chip
+              label={ETIQUETA_ESTADO[accidente.estado]}
+              color={COLOR_ESTADO[accidente.estado]}
+              size="small"
+              sx={{ mt: 0.5 }}
+            />
+          </Box>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => onVer(accidente.id)}
+            disabled={abriendoId !== null}
+            aria-label={`Ver accidente de ${accidente.aseguradoNombre}, placas ${accidente.vehiculoPlacas}`}
+            startIcon={
+              abriendoId === accidente.id ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : undefined
+            }
+          >
+            Ver
+          </Button>
+        </Paper>
+      ))}
+    </Stack>
   )
 }
 

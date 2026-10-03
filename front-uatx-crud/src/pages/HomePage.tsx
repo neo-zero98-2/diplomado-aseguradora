@@ -20,6 +20,8 @@ function HomePage() {
   const navigate = useNavigate()
   // Sube cada vez que el chat registra un accidente para recargar la tabla
   const [recargaMisAccidentes, setRecargaMisAccidentes] = useState(0)
+  // Sube cada vez que el asegurador guarda un cambio desde el chat
+  const [recargaAccidentes, setRecargaAccidentes] = useState(0)
 
   if (!perfil) return null
 
@@ -67,7 +69,9 @@ function HomePage() {
           {esAsegurado && (
             <MisAccidentesTabla recarga={recargaMisAccidentes} />
           )}
-          {perfil.rol === 'asegurador' && <AccidentesTabla />}
+          {perfil.rol === 'asegurador' && (
+            <AccidentesTabla recarga={recargaAccidentes} />
+          )}
         </Stack>
       </Box>
       {esAsegurado && (
@@ -85,7 +89,10 @@ function HomePage() {
       {perfil.rol === 'asegurador' && (
         <ChatFlotante etiqueta="Asistente de accidentes">
           {(accionCerrar) => (
-            <ChatAsegurador accionEncabezado={accionCerrar} />
+            <ChatAsegurador
+              accionEncabezado={accionCerrar}
+              onAccidenteActualizado={() => setRecargaAccidentes((n) => n + 1)}
+            />
           )}
         </ChatFlotante>
       )}
