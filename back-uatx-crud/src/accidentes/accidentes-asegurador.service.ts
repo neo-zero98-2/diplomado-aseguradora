@@ -1,6 +1,14 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import type { AccidenteAsegurador } from './accidentes.types.js';
+import type { ActualizarAccidenteDto } from './dto/actualizar-accidente.dto.js';
+
+export const ACCIDENTE_NO_ENCONTRADO = 'El accidente no existe';
 
 // Columnas del accidente, su asegurado y el asegurador de la última
 // actualización. accidentes tiene dos FKs, así que cada join nombra la suya
@@ -26,6 +34,45 @@ export class AccidentesAseguradorService {
       throw new InternalServerErrorException('No se pudo listar accidentes');
     }
     return data.map(aAccidenteAsegurador);
+  }
+
+  // Cambia el estado y/o la nota, y deja registrado quién y cuándo lo hizo
+  async actualizar(
+    id: string,
+    aseguradorId: string,
+    dto: ActualizarAccidenteDto,
+  ): Promise<AccidenteAsegurador> {
+    if (dto.estado === undefined && dto.notaAsegurador === undefined) {
+      throw new BadRequestException('Indica el estado o la nota a cambiar');
+    }
+
+    const cambios: Record<string, unknown> = {
+      actualizado_por: aseguradorId,
+      fecha_actualizacion: new Date().toISOString(),
+    };
+    if (dto.estado !== undefined) {
+      cambios.estado = dto.estado;
+    }
+    if (dto.notaAsegurador !== undefined) {
+      // Una nota vacía se guarda como null
+      cambios.nota_asegurador = dto.notaAsegurador?.trim() || null;
+    }
+
+    const { data, error } = await this.supabase.admin
+      .from('accidentes')
+      .update(cambios)
+      .eq('id', id)
+      .select(SELECT_ACCIDENTE_ASEGURADOR)
+      .maybeSingle();
+    if (error) {
+      throw new InternalServerErrorException(
+        'No se pudo actualizar el accidente',
+      );
+    }
+    if (!data) {
+      throw new NotFoundException(ACCIDENTE_NO_ENCONTRADO);
+    }
+    return aAccidenteAsegurador(data);
   }
 }
 
