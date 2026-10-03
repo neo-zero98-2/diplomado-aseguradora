@@ -1,6 +1,6 @@
 # SPEC 03 — Chat con IA Gemini para que el asegurado registre accidentes vehiculares
 
-> **Status:** Aprovado
+> **Status:** Aprobado
 > **Depends on:** SPEC 01, SPEC 02
 > **Date:** 2026-10-03
 > **Objective:** Agregar en `/home` un chat guiado por Gemini donde el asegurado reporta un accidente vehicular con una foto validada por la IA, su ubicación y sus datos, y el accidente se guarda en Supabase con estado `pendiente`.
