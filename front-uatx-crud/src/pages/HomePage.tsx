@@ -3,6 +3,7 @@ import { Box, Button, Stack } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import AccidentesTabla from '../accidentes/AccidentesTabla.tsx'
 import ChatAccidente from '../accidentes/ChatAccidente.tsx'
+import ChatAsegurador from '../accidentes/ChatAsegurador.tsx'
 import ChatFlotante from '../accidentes/ChatFlotante.tsx'
 import MisAccidentesTabla from '../accidentes/MisAccidentesTabla.tsx'
 import AppHeader from '../components/AppHeader.tsx'
@@ -11,8 +12,9 @@ import DatosPersonales from '../components/DatosPersonales.tsx'
 import { useAppSelector } from '../store/index.ts'
 
 // Dos columnas para ambos roles: "Datos personales" a la izquierda y, a la
-// derecha, los botones arriba y la tabla de accidentes debajo. El chat del
-// asegurado es un botón flotante en la esquina inferior derecha
+// derecha, los botones arriba y la tabla de accidentes debajo. Cada rol tiene
+// su chat de Gemini en un botón flotante en la esquina inferior derecha: el
+// asegurado reporta accidentes y el asegurador los consulta
 function HomePage() {
   const perfil = useAppSelector((state) => state.auth.perfil)
   const navigate = useNavigate()
@@ -31,8 +33,9 @@ function HomePage() {
           maxWidth: 1280,
           mx: 'auto',
           p: { xs: 2, md: 4 },
-          // Deja libre el alto del botón flotante para que no tape la tabla
-          pb: esAsegurado ? 12 : { xs: 2, md: 4 },
+          // Ambos roles tienen chat flotante: deja libre el alto del botón
+          // para que no tape la tabla
+          pb: 12,
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: '320px 1fr' },
           gap: { xs: 3, md: 4 },
@@ -76,6 +79,13 @@ function HomePage() {
                 setRecargaMisAccidentes((n) => n + 1)
               }
             />
+          )}
+        </ChatFlotante>
+      )}
+      {perfil.rol === 'asegurador' && (
+        <ChatFlotante etiqueta="Asistente de accidentes">
+          {(accionCerrar) => (
+            <ChatAsegurador accionEncabezado={accionCerrar} />
           )}
         </ChatFlotante>
       )}
