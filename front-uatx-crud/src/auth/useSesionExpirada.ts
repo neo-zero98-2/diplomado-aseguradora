@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SesionExpiradaError } from '../asegurados/api.ts'
+import { SesionExpiradaError } from '../api/peticion.ts'
 import { useAppDispatch } from '../store/index.ts'
 import { cerrarSesion } from '../store/authSlice.ts'
 
