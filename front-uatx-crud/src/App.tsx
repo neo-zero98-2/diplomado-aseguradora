@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import AseguradosPage from './pages/AseguradosPage.tsx'
 import HomePage from './pages/HomePage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
 import ProtectedRoute from './routes/ProtectedRoute.tsx'
@@ -19,6 +20,14 @@ function App() {
           element={
             <ProtectedRoute>
               <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/asegurados"
+          element={
+            <ProtectedRoute rol="asegurador">
+              <AseguradosPage />
             </ProtectedRoute>
           }
         />
