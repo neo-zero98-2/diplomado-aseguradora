@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { createObserveModule } from '@nestjs/observe';
+import { AccidentesModule } from './accidentes/accidentes.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AseguradosModule } from './asegurados/asegurados.module.js';
@@ -18,6 +19,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     }),
     AuthModule,
     AseguradosModule,
+    AccidentesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

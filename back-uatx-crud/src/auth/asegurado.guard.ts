@@ -6,11 +6,17 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
+import { extraerToken } from './asegurador.guard.js';
+
+// Petición que ya pasó por AseguradoGuard: trae el id del asegurado del token
+export interface PeticionAsegurado {
+  aseguradoId: string;
+}
 
 // Permite el paso solo a peticiones con un access token válido de Supabase
-// cuyo usuario exista en la tabla aseguradores
+// cuyo usuario exista en la tabla asegurados; deja su id en request.aseguradoId
 @Injectable()
-export class AseguradorGuard implements CanActivate {
+export class AseguradoGuard implements CanActivate {
   constructor(private readonly supabase: SupabaseService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -25,21 +31,16 @@ export class AseguradorGuard implements CanActivate {
       throw new UnauthorizedException('Token inválido o expirado');
     }
 
-    const { data: asegurador } = await this.supabase.admin
-      .from('aseguradores')
+    const { data: asegurado } = await this.supabase.admin
+      .from('asegurados')
       .select('id')
       .eq('id', data.user.id)
       .maybeSingle();
-    if (!asegurador) {
-      throw new ForbiddenException('Solo un asegurador puede hacer esto');
+    if (!asegurado) {
+      throw new ForbiddenException('Solo un asegurado puede hacer esto');
     }
 
+    request.aseguradoId = asegurado.id;
     return true;
   }
-}
-
-export function extraerToken(header: unknown): string | null {
-  if (typeof header !== 'string') return null;
-  const [tipo, token] = header.split(' ');
-  return tipo === 'Bearer' && token ? token : null;
 }

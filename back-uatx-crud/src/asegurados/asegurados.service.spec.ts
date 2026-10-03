@@ -27,13 +27,17 @@ const DUPLICADO = { code: '23505', message: 'duplicate key value' };
 type Resultado = { data: unknown; error: unknown };
 
 // Consulta falsa de PostgREST: los métodos encadenables se registran y devuelven
-// la misma consulta; los que la terminan (order, single, maybeSingle) entregan `resultado`
+// la misma consulta; los que la terminan (order, limit, single, maybeSingle) entregan `resultado`
 function consulta(resultado: Resultado) {
   const llamadas: Record<string, unknown[]> = {};
   const q: any = {
     llamadas,
     order: async (...args: unknown[]) => {
       llamadas.order = args;
+      return resultado;
+    },
+    limit: async (...args: unknown[]) => {
+      llamadas.limit = args;
       return resultado;
     },
     single: async () => resultado,
@@ -240,11 +244,28 @@ describe('AseguradosService', () => {
 
     it('borra la cuenta de auth.users', async () => {
       const buscar = consulta({ data: FILA, error: null });
-      const { supabase, auth } = crearSupabaseFalso([buscar]);
+      const sinAccidentes = consulta({ data: [], error: null });
+      const { supabase, auth } = crearSupabaseFalso([buscar, sinAccidentes]);
 
       await new AseguradosService(supabase).eliminar('uuid-1');
 
       expect(auth.deleteUser).toHaveBeenCalledWith('uuid-1');
+    });
+
+    it('responde 409 sin borrar la cuenta si el asegurado tiene accidentes', async () => {
+      const buscar = consulta({ data: FILA, error: null });
+      const conAccidentes = consulta({ data: [{ id: 'acc-1' }], error: null });
+      const { supabase, auth, from } = crearSupabaseFalso([
+        buscar,
+        conAccidentes,
+      ]);
+
+      await expect(
+        new AseguradosService(supabase).eliminar('uuid-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(from).toHaveBeenLastCalledWith('accidentes');
+      expect(conAccidentes.llamadas.eq).toEqual(['asegurado_id', 'uuid-1']);
+      expect(auth.deleteUser).not.toHaveBeenCalled();
     });
   });
 });

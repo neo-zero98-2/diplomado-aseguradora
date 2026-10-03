@@ -129,6 +129,22 @@ export class AseguradosService {
   async eliminar(id: string): Promise<void> {
     await this.buscarFila(id);
 
+    // accidentes.asegurado_id es ON DELETE RESTRICT: se avisa antes de borrar la cuenta
+    const { data: accidentes, error: errorAccidentes } =
+      await this.supabase.admin
+        .from('accidentes')
+        .select('id')
+        .eq('asegurado_id', id)
+        .limit(1);
+    if (errorAccidentes) {
+      throw new InternalServerErrorException(
+        'No se pudieron revisar los accidentes del asegurado',
+      );
+    }
+    if (accidentes.length > 0) {
+      throw new ConflictException('El asegurado tiene accidentes registrados');
+    }
+
     // La fila de asegurados cae por ON DELETE CASCADE
     const { error } = await this.supabase.admin.auth.admin.deleteUser(id);
     if (error) {

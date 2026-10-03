@@ -53,3 +53,6 @@ Se espera que las funcionalidades grandes pasen por `/spec` antes de implementar
 
 ## mcp
 ai vas a realizar cambios en el front o de la ui asegurate de revisarlas con playwrigth
+
+## skills
+Cada vez que realices un commit asegurate de usar el /git-commit
