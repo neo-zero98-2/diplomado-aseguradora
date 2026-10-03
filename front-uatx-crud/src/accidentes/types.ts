@@ -110,3 +110,27 @@ export interface MiAccidente {
   estado: EstadoAccidente
   notaAsegurador: string | null
 }
+
+// Body de POST /accidentes/consulta (asegurador): el historial sin el saludo
+// ni las sugerencias, y la zona horaria del navegador
+export interface ConsultaAsegurador {
+  mensajes: MensajeChat[]
+  zonaHoraria: string // IANA, p. ej. 'America/Mexico_City'
+}
+
+// Accidente que menciona una respuesta del chat del asegurador; lo arma el
+// backend desde la base de datos
+export interface AccidenteMencionado {
+  id: string
+  aseguradoNombre: string
+  vehiculoPlacas: string
+  estado: EstadoAccidente
+  gravedad: Gravedad
+  fechaHoraAccidente: string // ISO 8601
+}
+
+// Respuesta de POST /accidentes/consulta
+export interface RespuestaConsulta {
+  mensaje: string // texto plano, sin Markdown
+  accidentes: AccidenteMencionado[] // máx. 10
+}
