@@ -1,6 +1,6 @@
 # SPEC 04 — CRUD de accidentes para el asegurador y tabla de accidentes del asegurado en `/home`
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 02, SPEC 03
 > **Date:** 2026-10-03
 > **Objective:** Rediseñar `/home` en dos columnas para que el asegurador consulte, cambie de estado, anote y elimine los accidentes reportados, y el asegurado vea en una tabla de solo lectura el estado de sus accidentes, con el chat de la SPEC 03 movido a un botón flotante.
@@ -156,34 +156,34 @@ Conventions:
 
 ## Acceptance criteria
 
-- [ ] La tabla `accidentes` acepta los estados `pendiente`, `en_revision`, `aprobado` y `rechazado`, rechaza cualquier otro y tiene las columnas `nota_asegurador`, `actualizado_por` y `fecha_actualizacion`.
-- [ ] `GET /accidentes`, `GET /accidentes/:id/foto`, `PATCH /accidentes/:id` y `DELETE /accidentes/:id` responden 401 sin token y 403 con el token de un asegurado.
-- [ ] `GET /accidentes/mios` responde 401 sin token y 403 con el token de un asegurador.
-- [ ] `GET /accidentes` con token de asegurador responde 200 con todos los accidentes ordenados por `fechaReporte` descendente, cada uno con el nombre, `idContrato`, correo y vencimiento de su asegurado.
-- [ ] `GET /accidentes/mios` responde solo los accidentes del asegurado del token.
-- [ ] `PATCH /accidentes/:id` con un estado válido responde 200, y la fila queda con ese estado, `actualizado_por` igual al asegurador del token y `fecha_actualizacion` con la hora del cambio.
-- [ ] `PATCH /accidentes/:id` con body vacío, un estado inválido o una nota de más de 1000 caracteres responde 400.
-- [ ] `PATCH`, `DELETE` y `GET /accidentes/:id/foto` con un id inexistente responden 404.
-- [ ] `GET /accidentes/:id/foto` devuelve una URL que muestra la foto en el navegador.
-- [ ] `DELETE /accidentes/:id` responde 204, y la fila y su foto ya no existen en `accidentes` ni en el bucket.
-- [ ] Después de eliminar el último accidente de un asegurado, `DELETE /asegurados/:id` de ese asegurado responde 204.
-- [ ] En `/home`, ambos roles ven dos columnas en escritorio: "Datos personales" a la izquierda; a la derecha los botones arriba y la tabla de accidentes debajo. En móvil se ve una sola columna sin scroll horizontal de la página.
-- [ ] Como asegurador, "Administrar asegurados" sigue llevando a `/asegurados`.
-- [ ] Como asegurador, la tabla arranca mostrando solo los accidentes en "Pendiente". Cambiar el filtro a "Todos" u otro estado no hace peticiones nuevas.
-- [ ] Como asegurador, escribir en la búsqueda filtra por nombre del asegurado, `idContrato` o placas sin hacer peticiones nuevas.
-- [ ] Como asegurador, "Ver" abre el detalle con los datos del asegurado, el reporte completo, la foto y la última actualización.
-- [ ] Como asegurador, cambiar el estado o la nota y guardar actualiza la fila de la tabla sin recargar la página, y el detalle muestra al asegurador y la fecha de la actualización.
-- [ ] Como asegurador, "Eliminar" pide confirmación. "Cancelar" no borra nada y "Eliminar" quita la fila de la tabla.
-- [ ] Como asegurado, la tabla muestra fecha, vehículo, gravedad, estado y nota de sus accidentes, sin acciones de edición. Sin accidentes muestra "Aún no has reportado accidentes".
-- [ ] Como asegurado, `/home` muestra un botón flotante en la esquina inferior derecha y no muestra el chat en una columna.
-- [ ] Hacer clic en el botón flotante abre el chat. La cruz lo cierra, y al reabrirlo la conversación sigue donde estaba.
-- [ ] En móvil, el chat abierto ocupa toda la pantalla y la cruz lo cierra.
-- [ ] Confirmar un accidente en el chat agrega la fila nueva, en "Pendiente", a la tabla del asegurado sin recargar la página.
-- [ ] Como asegurador, `/home` no muestra el botón flotante del chat.
-- [ ] Con un access token inválido en `localStorage`, abrir `/home` redirige a `/login` con el aviso "Tu sesión expiró" para ambos roles.
-- [ ] Las pruebas de Vitest de `AseguradorGuard`, `AccidentesService.listarMios` y el servicio de accidentes del asegurador pasan con `npm test`.
-- [ ] `/home` se revisó con Playwright para ambos roles en escritorio y móvil, sin errores en la consola.
-- [ ] `npm run lint` y `npm run build` pasan sin errores en `back-uatx-crud` y en `front-uatx-crud`.
+- [x] La tabla `accidentes` acepta los estados `pendiente`, `en_revision`, `aprobado` y `rechazado`, rechaza cualquier otro y tiene las columnas `nota_asegurador`, `actualizado_por` y `fecha_actualizacion`.
+- [x] `GET /accidentes`, `GET /accidentes/:id/foto`, `PATCH /accidentes/:id` y `DELETE /accidentes/:id` responden 401 sin token y 403 con el token de un asegurado.
+- [x] `GET /accidentes/mios` responde 401 sin token y 403 con el token de un asegurador.
+- [x] `GET /accidentes` con token de asegurador responde 200 con todos los accidentes ordenados por `fechaReporte` descendente, cada uno con el nombre, `idContrato`, correo y vencimiento de su asegurado.
+- [x] `GET /accidentes/mios` responde solo los accidentes del asegurado del token.
+- [x] `PATCH /accidentes/:id` con un estado válido responde 200, y la fila queda con ese estado, `actualizado_por` igual al asegurador del token y `fecha_actualizacion` con la hora del cambio.
+- [x] `PATCH /accidentes/:id` con body vacío, un estado inválido o una nota de más de 1000 caracteres responde 400.
+- [x] `PATCH`, `DELETE` y `GET /accidentes/:id/foto` con un id inexistente responden 404.
+- [x] `GET /accidentes/:id/foto` devuelve una URL que muestra la foto en el navegador.
+- [x] `DELETE /accidentes/:id` responde 204, y la fila y su foto ya no existen en `accidentes` ni en el bucket.
+- [x] Después de eliminar el último accidente de un asegurado, `DELETE /asegurados/:id` de ese asegurado responde 204.
+- [x] En `/home`, ambos roles ven dos columnas en escritorio: "Datos personales" a la izquierda; a la derecha los botones arriba y la tabla de accidentes debajo. En móvil se ve una sola columna sin scroll horizontal de la página.
+- [x] Como asegurador, "Administrar asegurados" sigue llevando a `/asegurados`.
+- [x] Como asegurador, la tabla arranca mostrando solo los accidentes en "Pendiente". Cambiar el filtro a "Todos" u otro estado no hace peticiones nuevas.
+- [x] Como asegurador, escribir en la búsqueda filtra por nombre del asegurado, `idContrato` o placas sin hacer peticiones nuevas.
+- [x] Como asegurador, "Ver" abre el detalle con los datos del asegurado, el reporte completo, la foto y la última actualización.
+- [x] Como asegurador, cambiar el estado o la nota y guardar actualiza la fila de la tabla sin recargar la página, y el detalle muestra al asegurador y la fecha de la actualización.
+- [x] Como asegurador, "Eliminar" pide confirmación. "Cancelar" no borra nada y "Eliminar" quita la fila de la tabla.
+- [x] Como asegurado, la tabla muestra fecha, vehículo, gravedad, estado y nota de sus accidentes, sin acciones de edición. Sin accidentes muestra "Aún no has reportado accidentes".
+- [x] Como asegurado, `/home` muestra un botón flotante en la esquina inferior derecha y no muestra el chat en una columna.
+- [x] Hacer clic en el botón flotante abre el chat. La cruz lo cierra, y al reabrirlo la conversación sigue donde estaba.
+- [x] En móvil, el chat abierto ocupa toda la pantalla y la cruz lo cierra.
+- [x] Confirmar un accidente en el chat agrega la fila nueva, en "Pendiente", a la tabla del asegurado sin recargar la página.
+- [x] Como asegurador, `/home` no muestra el botón flotante del chat.
+- [x] Con un access token inválido en `localStorage`, abrir `/home` redirige a `/login` con el aviso "Tu sesión expiró" para ambos roles.
+- [x] Las pruebas de Vitest de `AseguradorGuard`, `AccidentesService.listarMios` y el servicio de accidentes del asegurador pasan con `npm test`.
+- [x] `/home` se revisó con Playwright para ambos roles en escritorio y móvil, sin errores en la consola.
+- [x] `npm run lint` y `npm run build` pasan sin errores en `back-uatx-crud` y en `front-uatx-crud`.
 
 ## Decisions
 
