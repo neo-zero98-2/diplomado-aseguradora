@@ -16,13 +16,18 @@ function AppHeader() {
   return (
     <AppBar position="static">
       <Toolbar>
-        {/* Espaciador del mismo ancho que el botón para centrar el título */}
-        <Box sx={{ flex: 1 }} />
+        {/* Espaciador simétrico al del botón para centrar el título; en móvil
+            no hay espacio y el título se alinea a la izquierda */}
+        <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
         <Typography variant="h6" component="h1" sx={{ fontWeight: 'bold' }}>
           Aseguradora
         </Typography>
         <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button color="inherit" onClick={handleCerrarSesion}>
+          <Button
+            color="inherit"
+            onClick={handleCerrarSesion}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
             Cerrar sesión
           </Button>
         </Box>
