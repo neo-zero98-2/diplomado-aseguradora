@@ -3,7 +3,11 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { GoogleGenAI, type ContentListUnion } from '@google/genai';
+import {
+  GoogleGenAI,
+  type Content,
+  type ContentListUnion,
+} from '@google/genai';
 import { GRAVEDADES, type Gravedad } from '../accidentes/constancia.js';
 
 export const GEMINI_NO_DISPONIBLE = 'El asistente no está configurado';
@@ -14,6 +18,17 @@ export interface AnalisisGemini {
   esAccidente: boolean;
   descripcion: string;
   gravedad: Gravedad;
+}
+
+export interface MensajeConversacion {
+  rol: 'usuario' | 'asistente';
+  texto: string;
+}
+
+interface PeticionConversacion {
+  instrucciones: string;
+  mensajes: MensajeConversacion[];
+  esquema: unknown;
 }
 
 const INSTRUCCIONES_FOTO = `Eres el analista de fotos de una aseguradora de autos.
@@ -108,6 +123,16 @@ export class GeminiService {
     };
   }
 
+  // Un turno de conversación: manda el historial completo y devuelve el JSON
+  // de la siguiente respuesta del asistente
+  conversar(peticion: PeticionConversacion): Promise<unknown> {
+    return this.generarJson({
+      instrucciones: peticion.instrucciones,
+      contenido: aContenidos(peticion.mensajes),
+      esquema: peticion.esquema,
+    });
+  }
+
   private configuracion(): { ai: GoogleGenAI; modelo: string } {
     const apiKey = process.env.GEMINI_API_KEY;
     const modelo = process.env.GEMINI_MODEL;
@@ -121,4 +146,27 @@ export class GeminiService {
     }
     return { ai: this.cliente.ai, modelo };
   }
+}
+
+// Gemini espera que la conversación empiece con el usuario y que los turnos
+// se alternen: los mensajes seguidos del mismo rol se juntan en un turno, y si
+// el chat abre con el asistente ("¿Estás bien?") se antepone un turno del usuario
+function aContenidos(mensajes: MensajeConversacion[]): Content[] {
+  const contenidos: Content[] = [];
+  for (const { rol, texto } of mensajes) {
+    const role = rol === 'usuario' ? 'user' : 'model';
+    const ultimo = contenidos.at(-1);
+    if (ultimo?.role === role) {
+      ultimo.parts!.push({ text: texto });
+    } else {
+      contenidos.push({ role, parts: [{ text: texto }] });
+    }
+  }
+  if (contenidos[0]?.role === 'model') {
+    contenidos.unshift({
+      role: 'user',
+      parts: [{ text: 'Quiero reportar un accidente.' }],
+    });
+  }
+  return contenidos;
 }

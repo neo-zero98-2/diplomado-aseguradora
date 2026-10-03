@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   HttpCode,
   HttpStatus,
@@ -16,13 +17,25 @@ import {
   type PeticionAsegurado,
 } from '../auth/asegurado.guard.js';
 import { AccidentesService } from './accidentes.service.js';
-import type { AnalisisFoto, ArchivoFoto } from './accidentes.types.js';
+import type {
+  AnalisisFoto,
+  ArchivoFoto,
+  RespuestaChat,
+} from './accidentes.types.js';
+import { ChatDto } from './dto/chat.dto.js';
 import { FotoDemasiadoGrandeFilter, opcionesFoto } from './foto.upload.js';
 
 @Controller('accidentes')
 @UseGuards(AseguradoGuard)
 export class AccidentesController {
   constructor(private readonly accidentesService: AccidentesService) {}
+
+  // Un turno de la entrevista: no crea nada, por eso responde 200
+  @Post('chat')
+  @HttpCode(HttpStatus.OK)
+  conversar(@Body() dto: ChatDto): Promise<RespuestaChat> {
+    return this.accidentesService.conversar(dto);
+  }
 
   // Solo analiza la foto: no guarda nada, por eso responde 200 y no 201
   @Post('foto')
