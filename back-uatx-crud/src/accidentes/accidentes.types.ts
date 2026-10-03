@@ -36,6 +36,21 @@ export interface AccidenteCreado {
   estado: 'pendiente';
 }
 
+export type EstadoAccidente =
+  'pendiente' | 'en_revision' | 'aprobado' | 'rechazado';
+
+// Elemento de GET /accidentes/mios (asegurado)
+export interface MiAccidente {
+  id: string;
+  fechaHoraAccidente: string;
+  vehiculoMarca: string;
+  vehiculoModelo: string;
+  vehiculoPlacas: string;
+  gravedad: Gravedad;
+  estado: EstadoAccidente;
+  notaAsegurador: string | null;
+}
+
 export type EtapaChat = 'entrevista' | 'confirmacion';
 
 // Respuesta de POST /accidentes/chat

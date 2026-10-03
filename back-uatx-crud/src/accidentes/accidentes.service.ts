@@ -14,6 +14,7 @@ import type {
   ArchivoFoto,
   DatosAccidente,
   EtapaChat,
+  MiAccidente,
   RespuestaChat,
 } from './accidentes.types.js';
 import type { ChatDto } from './dto/chat.dto.js';
@@ -113,6 +114,32 @@ export class AccidentesService {
     }
 
     return { id: data.id, estado: data.estado };
+  }
+
+  // Accidentes del asegurado del token, del reporte más reciente al más antiguo
+  async listarMios(aseguradoId: string): Promise<MiAccidente[]> {
+    const { data, error } = await this.supabase.admin
+      .from('accidentes')
+      .select(
+        'id, fecha_hora_accidente, vehiculo_marca, vehiculo_modelo, vehiculo_placas, gravedad, estado, nota_asegurador',
+      )
+      .eq('asegurado_id', aseguradoId)
+      .order('fecha_reporte', { ascending: false });
+    if (error) {
+      throw new InternalServerErrorException(
+        'No se pudo listar tus accidentes',
+      );
+    }
+    return data.map((fila) => ({
+      id: fila.id,
+      fechaHoraAccidente: fila.fecha_hora_accidente,
+      vehiculoMarca: fila.vehiculo_marca,
+      vehiculoModelo: fila.vehiculo_modelo,
+      vehiculoPlacas: fila.vehiculo_placas,
+      gravedad: fila.gravedad,
+      estado: fila.estado,
+      notaAsegurador: fila.nota_asegurador,
+    }));
   }
 
   // Analiza la foto con Gemini; no guarda nada. Si procede, devuelve la

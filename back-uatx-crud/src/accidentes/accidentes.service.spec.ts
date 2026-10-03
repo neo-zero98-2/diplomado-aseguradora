@@ -408,4 +408,51 @@ describe('AccidentesService', () => {
       );
     });
   });
+
+  describe('listarMios', () => {
+    it('solo pide los accidentes de ese asegurado y los mapea a camelCase', async () => {
+      const filas = [
+        {
+          id: 'accidente-1',
+          fecha_hora_accidente: '2026-10-03T23:30:00+00:00',
+          vehiculo_marca: 'Nissan',
+          vehiculo_modelo: 'Versa',
+          vehiculo_placas: 'TLX-123-A',
+          gravedad: 'moderado',
+          estado: 'en_revision',
+          nota_asegurador: 'Falta la póliza',
+        },
+      ];
+      const order = vi.fn(async () => ({ data: filas, error: null }));
+      const eq = vi.fn(() => ({ order }));
+      const from = vi.fn(() => ({ select: () => ({ eq }) }));
+      const supabase = {
+        admin: { from },
+      } as unknown as SupabaseService;
+      const servicio = new AccidentesService(
+        crearGeminiFalso().gemini,
+        supabase,
+      );
+
+      const resultado = await servicio.listarMios(ASEGURADO);
+
+      expect(from).toHaveBeenCalledWith('accidentes');
+      expect(eq).toHaveBeenCalledWith('asegurado_id', ASEGURADO);
+      expect(order).toHaveBeenCalledWith('fecha_reporte', {
+        ascending: false,
+      });
+      expect(resultado).toEqual([
+        {
+          id: 'accidente-1',
+          fechaHoraAccidente: '2026-10-03T23:30:00+00:00',
+          vehiculoMarca: 'Nissan',
+          vehiculoModelo: 'Versa',
+          vehiculoPlacas: 'TLX-123-A',
+          gravedad: 'moderado',
+          estado: 'en_revision',
+          notaAsegurador: 'Falta la póliza',
+        },
+      ]);
+    });
+  });
 });
