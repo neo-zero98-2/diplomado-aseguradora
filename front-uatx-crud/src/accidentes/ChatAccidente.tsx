@@ -22,13 +22,18 @@ import { ApiError } from '../api/peticion.ts'
 import BotonLlamar911 from '../components/BotonLlamar911.tsx'
 import { useSesionExpirada } from '../auth/useSesionExpirada.ts'
 import { useAppSelector } from '../store/index.ts'
-import { analizarFoto, conversar } from './api.ts'
+import { analizarFoto, conversar, crearAccidente } from './api.ts'
 import {
   MENSAJE_SIN_UBICACION,
   PREFIJO_FOTO_VALIDADA,
   PREFIJO_UBICACION,
 } from './mensajes.ts'
-import type { MensajeChat } from './types.ts'
+import type {
+  CrearAccidenteDto,
+  DatosAccidente,
+  EtapaChat,
+  MensajeChat,
+} from './types.ts'
 
 // Lo que se muestra en el chat; al backend solo viajan rol y texto
 interface MensajeVisible extends MensajeChat {
@@ -54,6 +59,7 @@ const TIPOS_FOTO = ['image/jpeg', 'image/png', 'image/webp']
 
 const ERROR_ASISTENTE = 'No se pudo contactar al asistente, inténtalo de nuevo'
 const ERROR_FOTO = 'No se pudo analizar la foto, inténtalo de nuevo'
+const ERROR_REGISTRO = 'No se pudo registrar el accidente, inténtalo de nuevo'
 
 function IconoEnviar() {
   return (
@@ -101,6 +107,13 @@ function obtenerUbicacion(): Promise<Coordenadas | null> {
   })
 }
 
+const TEXTO_OCUPADO = {
+  escribiendo: 'Gemini está escribiendo…',
+  analizando: 'Gemini está analizando la foto…',
+  ubicando: 'Obteniendo tu ubicación…',
+  guardando: 'Guardando tu reporte…',
+}
+
 function aHistorial(mensajes: MensajeVisible[]): MensajeChat[] {
   return mensajes.map(({ rol, texto }) => ({ rol, texto }))
 }
@@ -114,14 +127,20 @@ function ChatAccidente() {
   const [mensajes, setMensajes] = useState<MensajeVisible[]>([PREGUNTA_INICIAL])
   const [texto, setTexto] = useState('')
   const [ocupado, setOcupado] = useState<
-    'escribiendo' | 'analizando' | 'ubicando' | null
+    'escribiendo' | 'analizando' | 'ubicando' | 'guardando' | null
   >(null)
   const [error, setError] = useState<string | null>(null)
-  const [, setFotoValidada] = useState<FotoValidada | null>(null)
+  const [fotoValidada, setFotoValidada] = useState<FotoValidada | null>(null)
   // Coordenadas del GPS; si no hay, Gemini reúne la dirección escrita
-  const [, setUbicacion] = useState<Coordenadas | null>(null)
-  // La foto no mostró un accidente: la conversación terminó
-  const [noProcede, setNoProcede] = useState(false)
+  const [ubicacion, setUbicacion] = useState<Coordenadas | null>(null)
+  // Etapa y datos de la última respuesta de Gemini
+  const [etapa, setEtapa] = useState<EtapaChat>('entrevista')
+  const [datos, setDatos] = useState<Partial<DatosAccidente>>({})
+  // La conversación terminó: la foto no mostró un accidente o el accidente
+  // quedó registrado. Solo queda el botón "Nuevo reporte"
+  const [terminado, setTerminado] = useState<
+    'no-procede' | 'registrado' | null
+  >(null)
   const finRef = useRef<HTMLDivElement>(null)
   const campoRef = useRef<HTMLInputElement>(null)
   const archivoRef = useRef<HTMLInputElement>(null)
@@ -144,6 +163,8 @@ function ChatAccidente() {
     setOcupado('escribiendo')
     try {
       const respuesta = await conversar(token, aHistorial(historial))
+      setEtapa(respuesta.etapa)
+      setDatos(respuesta.datos)
       setMensajes([
         ...historial,
         {
@@ -167,7 +188,7 @@ function ChatAccidente() {
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
     const limpio = texto.trim()
-    if (!limpio || ocupado || noProcede) return
+    if (!limpio || ocupado || terminado) return
 
     const historial: MensajeVisible[] = [
       ...mensajes,
@@ -189,7 +210,7 @@ function ChatAccidente() {
     const archivo = evento.target.files?.[0]
     // Permite volver a elegir el mismo archivo
     evento.target.value = ''
-    if (!archivo || !token || ocupado || noProcede) return
+    if (!archivo || !token || ocupado || terminado) return
 
     setError(null)
     if (!TIPOS_FOTO.includes(archivo.type)) {
@@ -229,7 +250,7 @@ function ChatAccidente() {
         { rol: 'usuario', texto: 'Foto del accidente', fotoUrl },
         { rol: 'asistente', texto: analisis.mensaje },
       ])
-      setNoProcede(true)
+      setTerminado('no-procede')
       return
     }
 
@@ -253,7 +274,7 @@ function ChatAccidente() {
   // La ubicación entra al historial para que Gemini sepa si ya la tiene o si
   // debe pedir la dirección escrita
   async function compartirUbicacion() {
-    if (ocupado || noProcede) return
+    if (ocupado || terminado) return
 
     setError(null)
     setOcupado('ubicando')
@@ -270,16 +291,76 @@ function ChatAccidente() {
     await pedirRespuesta(historial)
   }
 
+  // Guarda el accidente con la foto analizada, su constancia y los datos que
+  // reunió Gemini; al terminar, el chat se limpia y vuelve a empezar
+  async function confirmar() {
+    if (!token || ocupado || etapa !== 'confirmacion') return
+
+    setError(null)
+    // Defensa por si Gemini dio por buena una foto o ubicación que no existe
+    if (!fotoValidada) {
+      setError('Falta la foto del accidente: adjúntala con el botón de la cámara')
+      return
+    }
+    if (!ubicacion && !datos.direccion) {
+      setError('Falta la ubicación: compártela o escribe la dirección')
+      return
+    }
+
+    const dto: CrearAccidenteDto = {
+      ...(datos as DatosAccidente),
+      ...(ubicacion && {
+        latitud: ubicacion.latitud,
+        longitud: ubicacion.longitud,
+      }),
+    }
+    setOcupado('guardando')
+    try {
+      await crearAccidente(
+        token,
+        fotoValidada.archivo,
+        fotoValidada.constancia,
+        dto,
+      )
+    } catch (e) {
+      setOcupado(null)
+      if (manejarSesionExpirada(e)) return
+      // Un 400 trae el motivo (p. ej. el análisis de la foto venció)
+      setError(
+        e instanceof ApiError && e.status === 400 ? e.message : ERROR_REGISTRO,
+      )
+      return
+    }
+    setOcupado(null)
+    // El chat queda limpio, sin volver a preguntar: el asegurado decide si
+    // empieza otro reporte con "Nuevo reporte"
+    limpiar()
+    setMensajes([])
+    setTerminado('registrado')
+  }
+
+  // La corrección se escribe en la conversación; Gemini vuelve a confirmar
+  function corregir() {
+    campoRef.current?.focus()
+  }
+
   // Descarta la conversación, la foto validada y su constancia
-  function nuevoReporte() {
+  function limpiar() {
     urlsRef.current.forEach((url) => URL.revokeObjectURL(url))
     urlsRef.current = []
-    setMensajes([PREGUNTA_INICIAL])
     setTexto('')
     setError(null)
     setFotoValidada(null)
     setUbicacion(null)
-    setNoProcede(false)
+    setEtapa('entrevista')
+    setDatos({})
+    setTerminado(null)
+  }
+
+  // Empieza otra conversación desde "¿Estás bien?"
+  function nuevoReporte() {
+    limpiar()
+    setMensajes([PREGUNTA_INICIAL])
   }
 
   return (
@@ -315,15 +396,23 @@ function ChatAccidente() {
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <CircularProgress size={14} />
             <Typography variant="body2" color="text.secondary">
-              {ocupado === 'analizando'
-                ? 'Gemini está analizando la foto…'
-                : ocupado === 'ubicando'
-                  ? 'Obteniendo tu ubicación…'
-                  : 'Gemini está escribiendo…'}
+              {TEXTO_OCUPADO[ocupado]}
             </Typography>
           </Stack>
         )}
-        {noProcede && (
+        {etapa === 'confirmacion' && !terminado && ocupado !== 'escribiendo' && (
+          <TarjetaConfirmacion
+            datos={datos}
+            guardando={ocupado === 'guardando'}
+            deshabilitado={!!ocupado}
+            onConfirmar={confirmar}
+            onCorregir={corregir}
+          />
+        )}
+        {terminado === 'registrado' && (
+          <Alert severity="success">Tu accidente quedó registrado</Alert>
+        )}
+        {terminado && (
           <Button
             variant="contained"
             onClick={nuevoReporte}
@@ -360,7 +449,7 @@ function ChatAccidente() {
           <span>
             <IconButton
               aria-label="Adjuntar foto"
-              disabled={!!ocupado || noProcede}
+              disabled={!!ocupado || !!terminado}
               onClick={() => archivoRef.current?.click()}
               sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
             >
@@ -372,7 +461,7 @@ function ChatAccidente() {
           <span>
             <IconButton
               aria-label="Compartir ubicación"
-              disabled={!!ocupado || noProcede}
+              disabled={!!ocupado || !!terminado}
               onClick={compartirUbicacion}
               sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
             >
@@ -391,12 +480,16 @@ function ChatAccidente() {
               e.currentTarget.closest('form')?.requestSubmit()
             }
           }}
-          placeholder="Escribe tu mensaje"
+          placeholder={
+            etapa === 'confirmacion'
+              ? 'Escribe qué quieres corregir'
+              : 'Escribe tu mensaje'
+          }
           size="small"
           fullWidth
           multiline
           maxRows={4}
-          disabled={!!ocupado || noProcede}
+          disabled={!!ocupado || !!terminado}
           slotProps={{
             htmlInput: {
               maxLength: MAXIMO_CARACTERES,
@@ -408,7 +501,7 @@ function ChatAccidente() {
           type="submit"
           color="primary"
           aria-label="Enviar"
-          disabled={!!ocupado || noProcede || !texto.trim()}
+          disabled={!!ocupado || !!terminado || !texto.trim()}
           sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
         >
           <IconoEnviar />
@@ -470,6 +563,86 @@ function Burbuja({ mensaje }: { mensaje: MensajeVisible }) {
         <BotonLlamar911 />
       </Alert>
     </>
+  )
+}
+
+interface TarjetaConfirmacionProps {
+  datos: Partial<DatosAccidente>
+  guardando: boolean
+  deshabilitado: boolean
+  onConfirmar: () => void
+  onCorregir: () => void
+}
+
+// Solo se confirman los datos del vehículo y de los terceros
+function TarjetaConfirmacion({
+  datos,
+  guardando,
+  deshabilitado,
+  onConfirmar,
+  onCorregir,
+}: TarjetaConfirmacionProps) {
+  const filas: [string, string][] = [
+    ['Vehículo', `${datos.vehiculoMarca ?? ''} ${datos.vehiculoModelo ?? ''}`],
+    ['Placas', datos.vehiculoPlacas ?? ''],
+    [
+      'Terceros',
+      datos.hayTerceros
+        ? (datos.tercerosDescripcion ?? '')
+        : 'Sin terceros involucrados',
+    ],
+  ]
+
+  return (
+    <Paper
+      variant="outlined"
+      component="section"
+      aria-label="Confirmación del reporte"
+      sx={{ p: 2, borderColor: 'primary.main' }}
+    >
+      <Typography variant="subtitle2" component="h3" gutterBottom>
+        Revisa tus datos
+      </Typography>
+      <Stack component="dl" spacing={1} sx={{ m: 0, mb: 2 }}>
+        {filas.map(([etiqueta, valor]) => (
+          <Box key={etiqueta}>
+            <Typography
+              component="dt"
+              variant="caption"
+              color="text.secondary"
+            >
+              {etiqueta}
+            </Typography>
+            <Typography
+              component="dd"
+              variant="body2"
+              sx={{ m: 0, wordBreak: 'break-word' }}
+            >
+              {valor.trim()}
+            </Typography>
+          </Box>
+        ))}
+      </Stack>
+      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+        <Button
+          variant="outlined"
+          onClick={onCorregir}
+          disabled={deshabilitado}
+        >
+          Corregir
+        </Button>
+        <Button
+          variant="contained"
+          onClick={onConfirmar}
+          disabled={deshabilitado}
+          startIcon={
+            guardando ? <CircularProgress size={16} color="inherit" /> : null
+          }
+        >
+          Confirmar
+        </Button>
+      </Stack>
+    </Paper>
   )
 }
 

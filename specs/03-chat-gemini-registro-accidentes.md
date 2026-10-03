@@ -23,7 +23,7 @@ La SPEC 02 dejó vacío el recuadro "chat con ia gemini" de `references/ui/panta
 - Entrevista guiada con estos datos obligatorios: "¿estás bien?", una foto validada, ubicación, fecha y hora del accidente, datos del vehículo (marca, modelo y placas) y terceros involucrados.
 - Si el asegurado responde que no está bien, el chat recomienda llamar al 911, muestra el botón que abre el diálogo de confirmación de la SPEC 02 y la entrevista continúa.
 - Ubicación con el GPS del navegador (latitud y longitud) y, si el permiso se niega o falla, la dirección escrita en el chat.
-- Confirmación al final: el chat muestra los datos del vehículo y de los terceros con los botones "Confirmar" y "Corregir". Al confirmar se guarda el accidente y el chat termina y se limpia.
+- Confirmación al final: el chat muestra los datos del vehículo y de los terceros con los botones "Confirmar" y "Corregir". Al confirmar se guarda el accidente y el chat termina y se limpia; el botón "Nuevo reporte" empieza otra conversación.
 - Cambio en el CRUD de la SPEC 02: `DELETE /asegurados/:id` responde 409 si el asegurado tiene accidentes registrados.
 
 **Out of scope (for future specs):**
@@ -180,7 +180,7 @@ Conventions:
 11. Frontend: botón para adjuntar la foto en el chat (`accept="image/*"`, `capture="environment"` en móvil) con vista previa. Si procede, muestra la descripción y la gravedad, y guarda el archivo y la constancia en el estado del chat hasta la confirmación. Si no procede, muestra el mensaje "No procede" y el botón "Nuevo reporte".
 12. Frontend: botón "Compartir ubicación" con `navigator.geolocation`. Si el permiso se niega o falla, el chat pide escribir la dirección.
 13. Frontend: cuando la respuesta trae `sugerir911: true`, mostrar dentro del chat el aviso y el `BotonLlamar911` de la SPEC 02 sin interrumpir la entrevista.
-14. Frontend: cuando la etapa es `confirmacion`, mostrar la tarjeta con los datos del vehículo y de los terceros y los botones "Confirmar" y "Corregir". "Corregir" devuelve el foco al campo de texto para escribir la corrección. "Confirmar" llama a `POST /accidentes` con la foto, la constancia y los datos, muestra "Tu accidente quedó registrado" y limpia el chat. Un 401 en cualquier llamada usa `useSesionExpirada`.
+14. Frontend: cuando la etapa es `confirmacion`, mostrar la tarjeta con los datos del vehículo y de los terceros y los botones "Confirmar" y "Corregir". "Corregir" devuelve el foco al campo de texto para escribir la corrección. "Confirmar" llama a `POST /accidentes` con la foto, la constancia y los datos, muestra "Tu accidente quedó registrado", limpia el chat y muestra el botón "Nuevo reporte" en lugar de volver a preguntar. Un 401 en cualquier llamada usa `useSesionExpirada`.
 15. Revisar `/home` con Playwright para ambos roles contra la maqueta (requisito de `CLAUDE.md`), con la API real de Gemini y el `.env` configurado.
 
 ## Acceptance criteria
@@ -205,7 +205,7 @@ Conventions:
 - [ ] Una foto que no procede muestra el mensaje de Gemini y "Nuevo reporte", y no se guarda ningún accidente.
 - [ ] En la confirmación aparecen los datos del vehículo y de los terceros con "Confirmar" y "Corregir".
 - [ ] "Corregir" permite cambiar esos datos en la conversación y vuelve a mostrar la confirmación con los datos nuevos.
-- [ ] "Confirmar" guarda el accidente, muestra "Tu accidente quedó registrado" y deja el chat limpio, empezando de nuevo con "¿Estás bien?".
+- [ ] "Confirmar" guarda el accidente, muestra "Tu accidente quedó registrado" y deja el chat limpio con el botón "Nuevo reporte", que empieza de nuevo con "¿Estás bien?".
 - [ ] Recargar la página a mitad de la conversación la reinicia y no guarda nada.
 - [ ] Las pruebas de Vitest de `AseguradoGuard`, la constancia, `AccidentesService` y el nuevo caso de `AseguradosService` pasan con `npm test`.
 - [ ] `/home` se revisó con Playwright para ambos roles, sin errores en la consola.
@@ -231,7 +231,7 @@ Conventions:
 - **Sí:** GPS del navegador con respaldo de dirección escrita. Se guardan coordenadas o dirección, al menos una de las dos.
 - **Sí:** Si el asegurado no está bien, se ofrece el 911 y la entrevista sigue. **No:** pausar el reporte.
 - **Sí:** Los mensajes viven en el navegador y se mandan completos en cada turno. El backend no guarda estado. **No:** guardar la conversación en memoria del backend ni en una tabla.
-- **Sí:** Solo se confirman los datos del vehículo y de los terceros con "Confirmar" y "Corregir". Los demás datos no se confirman. Al confirmar, el chat termina y se limpia.
+- **Sí:** Solo se confirman los datos del vehículo y de los terceros con "Confirmar" y "Corregir". Los demás datos no se confirman. Al confirmar, el chat termina y se limpia, y el asegurado empieza otro reporte con "Nuevo reporte" cuando lo decida. **No:** volver a preguntar "¿Estás bien?" de inmediato (ajuste pedido durante la implementación).
 - **Sí:** El accidente nace con `estado = 'pendiente'`. La SPEC 04 agrega los demás estados.
 - **Sí:** No se puede eliminar a un asegurado con accidentes (409 en el backend y `on delete restrict` en la tabla). Corrige la decisión de borrado en cascada de la SPEC 02 ahora que existen accidentes ligados. **No:** borrar en cascada sus accidentes y fotos.
 - **Sí:** Salida estructurada de Gemini validada por el backend, que solo acepta la confirmación con todos los datos. Evita que la IA cierre un reporte incompleto.
