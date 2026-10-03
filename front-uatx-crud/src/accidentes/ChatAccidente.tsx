@@ -4,6 +4,7 @@ import {
   useState,
   type ChangeEvent,
   type FormEvent,
+  type ReactNode,
 } from 'react'
 import {
   Alert,
@@ -118,10 +119,21 @@ function aHistorial(mensajes: MensajeVisible[]): MensajeChat[] {
   return mensajes.map(({ rol, texto }) => ({ rol, texto }))
 }
 
+interface ChatAccidenteProps {
+  // Se llama cuando el accidente quedó registrado (p. ej. para recargar la tabla)
+  onAccidenteRegistrado?: () => void
+  // Se dibuja a la derecha del encabezado (p. ej. el botón para cerrar el chat)
+  accionEncabezado?: ReactNode
+}
+
 // Entrevista guiada por Gemini para reportar un accidente. La conversación, la
 // foto validada y su constancia viven solo aquí: se manda el historial completo
-// en cada turno y recargar la página la reinicia
-function ChatAccidente() {
+// en cada turno y recargar la página la reinicia. Ocupa todo el alto de su
+// contenedor
+function ChatAccidente({
+  onAccidenteRegistrado,
+  accionEncabezado,
+}: ChatAccidenteProps) {
   const token = useAppSelector((state) => state.auth.accessToken)
   const manejarSesionExpirada = useSesionExpirada()
   const [mensajes, setMensajes] = useState<MensajeVisible[]>([PREGUNTA_INICIAL])
@@ -337,6 +349,7 @@ function ChatAccidente() {
     limpiar()
     setMensajes([])
     setTerminado('registrado')
+    onAccidenteRegistrado?.()
   }
 
   // La corrección se escribe en la conversación; Gemini vuelve a confirmar
@@ -371,16 +384,29 @@ function ChatAccidente() {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: { xs: 480, md: 560 },
+        height: '100%',
       }}
     >
-      <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="h6" component="h2">
-          Chat con IA Gemini
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Reporta un accidente vehicular
-        </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 1,
+          px: 2,
+          py: 1.5,
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h6" component="h2">
+            Chat con IA Gemini
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Reporta un accidente vehicular
+          </Typography>
+        </Box>
+        {accionEncabezado}
       </Box>
 
       <Stack

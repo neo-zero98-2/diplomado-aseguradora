@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -21,6 +22,7 @@ import type {
   AccidenteCreado,
   AnalisisFoto,
   ArchivoFoto,
+  MiAccidente,
   RespuestaChat,
 } from './accidentes.types.js';
 import { ChatDto } from './dto/chat.dto.js';
@@ -31,6 +33,12 @@ import { FotoDemasiadoGrandeFilter, opcionesFoto } from './foto.upload.js';
 @UseGuards(AseguradoGuard)
 export class AccidentesController {
   constructor(private readonly accidentesService: AccidentesService) {}
+
+  // Tabla informativa del asegurado en /home: solo sus accidentes
+  @Get('mios')
+  listarMios(@Req() request: PeticionAsegurado): Promise<MiAccidente[]> {
+    return this.accidentesService.listarMios(request.aseguradoId);
+  }
 
   // multipart: foto (la misma que se analizó), constancia y datos (JSON).
   // @Post responde 201 por defecto
