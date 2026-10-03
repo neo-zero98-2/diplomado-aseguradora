@@ -9,11 +9,13 @@ import {
   Typography,
 } from '@mui/material'
 import { login, LoginError } from '../auth/api.ts'
-import { useAppDispatch } from '../store/index.ts'
+import { useAppDispatch, useAppSelector } from '../store/index.ts'
 import { iniciarSesion } from '../store/authSlice.ts'
 
 function LoginPage() {
   const dispatch = useAppDispatch()
+  // Aviso al llegar desde una sesión expirada (lo pone useSesionExpirada)
+  const aviso = useAppSelector((state) => state.auth.avisoLogin)
   const [identificador, setIdentificador] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -76,7 +78,11 @@ function LoginPage() {
             fullWidth
           />
 
-          {error && <Alert severity="error">{error}</Alert>}
+          {error ? (
+            <Alert severity="error">{error}</Alert>
+          ) : (
+            aviso && <Alert severity="warning">{aviso}</Alert>
+          )}
 
           <Box>
             <Button
