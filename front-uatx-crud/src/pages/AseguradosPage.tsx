@@ -12,7 +12,8 @@ import {
 import AppHeader from '../components/AppHeader.tsx'
 import AseguradoFormDialog from '../asegurados/AseguradoFormDialog.tsx'
 import AseguradosTabla from '../asegurados/AseguradosTabla.tsx'
-import { actualizar, crear, listar } from '../asegurados/api.ts'
+import EliminarAseguradoDialog from '../asegurados/EliminarAseguradoDialog.tsx'
+import { actualizar, crear, eliminar, listar } from '../asegurados/api.ts'
 import type { Asegurado } from '../asegurados/types.ts'
 import { useSesionExpirada } from '../auth/useSesionExpirada.ts'
 import { useAppSelector } from '../store/index.ts'
@@ -35,6 +36,7 @@ function AseguradosPage() {
   const [dialogo, setDialogo] = useState<{ asegurado?: Asegurado } | null>(
     null,
   )
+  const [porEliminar, setPorEliminar] = useState<Asegurado | null>(null)
 
   const manejarError = useCallback(
     (err: unknown) => {
@@ -136,6 +138,7 @@ function AseguradosPage() {
       <AseguradosTabla
         asegurados={filtrados}
         onEditar={(asegurado) => setDialogo({ asegurado })}
+        onEliminar={setPorEliminar}
       />
     )
   }
@@ -175,6 +178,13 @@ function AseguradosPage() {
           onActualizar={(id, dto) =>
             guardarYRecargar((t) => actualizar(t, id, dto))
           }
+        />
+      )}
+      {porEliminar && (
+        <EliminarAseguradoDialog
+          asegurado={porEliminar}
+          onCerrar={() => setPorEliminar(null)}
+          onEliminar={(id) => guardarYRecargar((t) => eliminar(t, id))}
         />
       )}
     </>
