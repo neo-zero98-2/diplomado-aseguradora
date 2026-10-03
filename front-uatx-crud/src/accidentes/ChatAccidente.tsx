@@ -15,13 +15,18 @@ import {
   Stack,
   SvgIcon,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import { ApiError } from '../api/peticion.ts'
 import { useSesionExpirada } from '../auth/useSesionExpirada.ts'
 import { useAppSelector } from '../store/index.ts'
 import { analizarFoto, conversar } from './api.ts'
-import { PREFIJO_FOTO_VALIDADA } from './mensajes.ts'
+import {
+  MENSAJE_SIN_UBICACION,
+  PREFIJO_FOTO_VALIDADA,
+  PREFIJO_UBICACION,
+} from './mensajes.ts'
 import type { MensajeChat } from './types.ts'
 
 // Lo que se muestra en el chat; al backend solo viajan rol y texto
@@ -65,6 +70,35 @@ function IconoCamara() {
   )
 }
 
+function IconoUbicacion() {
+  return (
+    <SvgIcon fontSize="small">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7m0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5" />
+    </SvgIcon>
+  )
+}
+
+interface Coordenadas {
+  latitud: number
+  longitud: number
+}
+
+// Resuelve null si el navegador no tiene GPS, el permiso se niega o falla
+function obtenerUbicacion(): Promise<Coordenadas | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null)
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) =>
+        resolve({ latitud: coords.latitude, longitud: coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+    )
+  })
+}
+
 function aHistorial(mensajes: MensajeVisible[]): MensajeChat[] {
   return mensajes.map(({ rol, texto }) => ({ rol, texto }))
 }
@@ -77,11 +111,13 @@ function ChatAccidente() {
   const manejarSesionExpirada = useSesionExpirada()
   const [mensajes, setMensajes] = useState<MensajeVisible[]>([PREGUNTA_INICIAL])
   const [texto, setTexto] = useState('')
-  const [ocupado, setOcupado] = useState<'escribiendo' | 'analizando' | null>(
-    null,
-  )
+  const [ocupado, setOcupado] = useState<
+    'escribiendo' | 'analizando' | 'ubicando' | null
+  >(null)
   const [error, setError] = useState<string | null>(null)
   const [, setFotoValidada] = useState<FotoValidada | null>(null)
+  // Coordenadas del GPS; si no hay, Gemini reúne la dirección escrita
+  const [, setUbicacion] = useState<Coordenadas | null>(null)
   // La foto no mostró un accidente: la conversación terminó
   const [noProcede, setNoProcede] = useState(false)
   const finRef = useRef<HTMLDivElement>(null)
@@ -208,6 +244,26 @@ function ChatAccidente() {
     await pedirRespuesta(historial)
   }
 
+  // La ubicación entra al historial para que Gemini sepa si ya la tiene o si
+  // debe pedir la dirección escrita
+  async function compartirUbicacion() {
+    if (ocupado || noProcede) return
+
+    setError(null)
+    setOcupado('ubicando')
+    const coordenadas = await obtenerUbicacion()
+    setUbicacion(coordenadas)
+    const texto = coordenadas
+      ? `${PREFIJO_UBICACION} ${coordenadas.latitud.toFixed(5)}, ${coordenadas.longitud.toFixed(5)}`
+      : MENSAJE_SIN_UBICACION
+    const historial: MensajeVisible[] = [
+      ...mensajes,
+      { rol: 'usuario', texto },
+    ]
+    setMensajes(historial)
+    await pedirRespuesta(historial)
+  }
+
   // Descarta la conversación, la foto validada y su constancia
   function nuevoReporte() {
     urlsRef.current.forEach((url) => URL.revokeObjectURL(url))
@@ -216,6 +272,7 @@ function ChatAccidente() {
     setTexto('')
     setError(null)
     setFotoValidada(null)
+    setUbicacion(null)
     setNoProcede(false)
   }
 
@@ -254,7 +311,9 @@ function ChatAccidente() {
             <Typography variant="body2" color="text.secondary">
               {ocupado === 'analizando'
                 ? 'Gemini está analizando la foto…'
-                : 'Gemini está escribiendo…'}
+                : ocupado === 'ubicando'
+                  ? 'Obteniendo tu ubicación…'
+                  : 'Gemini está escribiendo…'}
             </Typography>
           </Stack>
         )}
@@ -290,14 +349,31 @@ function ChatAccidente() {
           hidden
           onChange={adjuntarFoto}
         />
-        <IconButton
-          aria-label="Adjuntar foto"
-          disabled={!!ocupado || noProcede}
-          onClick={() => archivoRef.current?.click()}
-          sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
-        >
-          <IconoCamara />
-        </IconButton>
+        {/* El span deja que el tooltip funcione con el botón desactivado */}
+        <Tooltip title="Adjuntar foto">
+          <span>
+            <IconButton
+              aria-label="Adjuntar foto"
+              disabled={!!ocupado || noProcede}
+              onClick={() => archivoRef.current?.click()}
+              sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
+            >
+              <IconoCamara />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="Compartir ubicación">
+          <span>
+            <IconButton
+              aria-label="Compartir ubicación"
+              disabled={!!ocupado || noProcede}
+              onClick={compartirUbicacion}
+              sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
+            >
+              <IconoUbicacion />
+            </IconButton>
+          </span>
+        </Tooltip>
         <TextField
           inputRef={campoRef}
           value={texto}
