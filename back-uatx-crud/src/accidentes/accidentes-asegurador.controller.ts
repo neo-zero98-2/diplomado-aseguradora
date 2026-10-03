@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -16,8 +17,14 @@ import {
   type PeticionAsegurador,
 } from '../auth/asegurador.guard.js';
 import { AccidentesAseguradorService } from './accidentes-asegurador.service.js';
-import type { AccidenteAsegurador, FotoAccidente } from './accidentes.types.js';
+import type {
+  AccidenteAsegurador,
+  FotoAccidente,
+  RespuestaConsulta,
+} from './accidentes.types.js';
+import { ConsultaAseguradorService } from './consulta-asegurador.service.js';
 import { ActualizarAccidenteDto } from './dto/actualizar-accidente.dto.js';
+import { ConsultaAseguradorDto } from './dto/consulta-asegurador.dto.js';
 
 // Comparte la ruta /accidentes con AccidentesController, que es del asegurado;
 // aquí van solo los endpoints del asegurador
@@ -26,11 +33,20 @@ import { ActualizarAccidenteDto } from './dto/actualizar-accidente.dto.js';
 export class AccidentesAseguradorController {
   constructor(
     private readonly accidentesAseguradorService: AccidentesAseguradorService,
+    private readonly consultaAseguradorService: ConsultaAseguradorService,
   ) {}
 
   @Get()
   listar(): Promise<AccidenteAsegurador[]> {
     return this.accidentesAseguradorService.listar();
+  }
+
+  // Un turno del chat de consulta: solo lee, por eso responde 200. No choca con
+  // POST /accidentes del asegurado, que no lleva más segmentos
+  @Post('consulta')
+  @HttpCode(HttpStatus.OK)
+  consultar(@Body() dto: ConsultaAseguradorDto): Promise<RespuestaConsulta> {
+    return this.consultaAseguradorService.consultar(dto);
   }
 
   // AccidentesController va antes en AccidentesModule, así que GET
