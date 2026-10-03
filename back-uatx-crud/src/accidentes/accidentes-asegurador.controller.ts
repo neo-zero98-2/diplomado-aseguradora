@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -46,5 +49,11 @@ export class AccidentesAseguradorController {
       request.aseguradorId,
       dto,
     );
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  eliminar(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return this.accidentesAseguradorService.eliminar(id);
   }
 }

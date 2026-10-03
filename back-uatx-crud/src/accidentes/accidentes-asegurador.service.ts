@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
@@ -25,6 +26,8 @@ export const SELECT_ACCIDENTE_ASEGURADOR = `
 // Herramienta de trabajo del asegurador: ve todos los accidentes
 @Injectable()
 export class AccidentesAseguradorService {
+  private readonly logger = new Logger(AccidentesAseguradorService.name);
+
   constructor(private readonly supabase: SupabaseService) {}
 
   // Todos los accidentes, del reporte más reciente al más antiguo; el filtro
@@ -100,6 +103,34 @@ export class AccidentesAseguradorService {
       throw new InternalServerErrorException('No se pudo obtener la foto');
     }
     return { url: data.signedUrl };
+  }
+
+  // Borrado físico: primero la fila y después su foto. Una foto huérfana es
+  // menos grave que un accidente sin foto, así que si falla solo se registra
+  async eliminar(id: string): Promise<void> {
+    const { data, error } = await this.supabase.admin
+      .from('accidentes')
+      .delete()
+      .eq('id', id)
+      .select('foto_path')
+      .maybeSingle();
+    if (error) {
+      throw new InternalServerErrorException(
+        'No se pudo eliminar el accidente',
+      );
+    }
+    if (!data) {
+      throw new NotFoundException(ACCIDENTE_NO_ENCONTRADO);
+    }
+
+    const { error: errorFoto } = await this.supabase.admin.storage
+      .from(BUCKET_FOTOS)
+      .remove([data.foto_path]);
+    if (errorFoto) {
+      this.logger.error(
+        `No se pudo borrar la foto huérfana ${data.foto_path}: ${errorFoto.message}`,
+      );
+    }
   }
 }
 
