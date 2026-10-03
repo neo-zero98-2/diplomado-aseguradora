@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Box, Button, Stack } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import ChatFlotante from '../accidentes/ChatFlotante.tsx'
+import MisAccidentesTabla from '../accidentes/MisAccidentesTabla.tsx'
 import AppHeader from '../components/AppHeader.tsx'
 import BotonLlamar911 from '../components/BotonLlamar911.tsx'
 import DatosPersonales from '../components/DatosPersonales.tsx'
@@ -12,6 +14,8 @@ import { useAppSelector } from '../store/index.ts'
 function HomePage() {
   const perfil = useAppSelector((state) => state.auth.perfil)
   const navigate = useNavigate()
+  // Sube cada vez que el chat registra un accidente para recargar la tabla
+  const [recargaMisAccidentes, setRecargaMisAccidentes] = useState(0)
 
   if (!perfil) return null
 
@@ -55,10 +59,17 @@ function HomePage() {
               </Button>
             )}
           </Stack>
-          {/* Aquí va la tabla de accidentes (pasos 11 y 12) */}
+          {esAsegurado && (
+            <MisAccidentesTabla recarga={recargaMisAccidentes} />
+          )}
+          {/* Aquí va la tabla de accidentes del asegurador (paso 12) */}
         </Stack>
       </Box>
-      {esAsegurado && <ChatFlotante />}
+      {esAsegurado && (
+        <ChatFlotante
+          onAccidenteRegistrado={() => setRecargaMisAccidentes((n) => n + 1)}
+        />
+      )}
     </>
   )
 }
