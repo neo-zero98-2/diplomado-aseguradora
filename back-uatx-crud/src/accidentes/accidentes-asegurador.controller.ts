@@ -13,7 +13,7 @@ import {
   type PeticionAsegurador,
 } from '../auth/asegurador.guard.js';
 import { AccidentesAseguradorService } from './accidentes-asegurador.service.js';
-import type { AccidenteAsegurador } from './accidentes.types.js';
+import type { AccidenteAsegurador, FotoAccidente } from './accidentes.types.js';
 import { ActualizarAccidenteDto } from './dto/actualizar-accidente.dto.js';
 
 // Comparte la ruta /accidentes con AccidentesController, que es del asegurado;
@@ -28,6 +28,11 @@ export class AccidentesAseguradorController {
   @Get()
   listar(): Promise<AccidenteAsegurador[]> {
     return this.accidentesAseguradorService.listar();
+  }
+
+  @Get(':id/foto')
+  obtenerFoto(@Param('id', ParseUUIDPipe) id: string): Promise<FotoAccidente> {
+    return this.accidentesAseguradorService.obtenerFoto(id);
   }
 
   @Patch(':id')

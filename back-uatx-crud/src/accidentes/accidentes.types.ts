@@ -81,6 +81,11 @@ export interface AccidenteAsegurador {
   };
 }
 
+// Respuesta de GET /accidentes/:id/foto
+export interface FotoAccidente {
+  url: string; // URL firmada de Storage, válida 10 minutos
+}
+
 export type EtapaChat = 'entrevista' | 'confirmacion';
 
 // Respuesta de POST /accidentes/chat

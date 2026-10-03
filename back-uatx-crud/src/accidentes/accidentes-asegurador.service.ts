@@ -5,10 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
-import type { AccidenteAsegurador } from './accidentes.types.js';
+import { BUCKET_FOTOS } from './accidentes.service.js';
+import type { AccidenteAsegurador, FotoAccidente } from './accidentes.types.js';
 import type { ActualizarAccidenteDto } from './dto/actualizar-accidente.dto.js';
 
 export const ACCIDENTE_NO_ENCONTRADO = 'El accidente no existe';
+
+// Vigencia de la URL firmada de la foto: 10 minutos
+const VIGENCIA_URL_FOTO_S = 600;
 
 // Columnas del accidente, su asegurado y el asegurador de la última
 // actualización. accidentes tiene dos FKs, así que cada join nombra la suya
@@ -73,6 +77,29 @@ export class AccidentesAseguradorService {
       throw new NotFoundException(ACCIDENTE_NO_ENCONTRADO);
     }
     return aAccidenteAsegurador(data);
+  }
+
+  // El bucket es privado: la foto solo se ve con una URL firmada temporal
+  async obtenerFoto(id: string): Promise<FotoAccidente> {
+    const { data: accidente, error } = await this.supabase.admin
+      .from('accidentes')
+      .select('foto_path')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) {
+      throw new InternalServerErrorException('No se pudo obtener la foto');
+    }
+    if (!accidente) {
+      throw new NotFoundException(ACCIDENTE_NO_ENCONTRADO);
+    }
+
+    const { data, error: errorUrl } = await this.supabase.admin.storage
+      .from(BUCKET_FOTOS)
+      .createSignedUrl(accidente.foto_path, VIGENCIA_URL_FOTO_S);
+    if (errorUrl || !data) {
+      throw new InternalServerErrorException('No se pudo obtener la foto');
+    }
+    return { url: data.signedUrl };
   }
 }
 
