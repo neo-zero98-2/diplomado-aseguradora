@@ -18,17 +18,45 @@ import {
 } from '../auth/asegurado.guard.js';
 import { AccidentesService } from './accidentes.service.js';
 import type {
+  AccidenteCreado,
   AnalisisFoto,
   ArchivoFoto,
   RespuestaChat,
 } from './accidentes.types.js';
 import { ChatDto } from './dto/chat.dto.js';
+import { leerCrearAccidenteDto } from './dto/crear-accidente.dto.js';
 import { FotoDemasiadoGrandeFilter, opcionesFoto } from './foto.upload.js';
 
 @Controller('accidentes')
 @UseGuards(AseguradoGuard)
 export class AccidentesController {
   constructor(private readonly accidentesService: AccidentesService) {}
+
+  // multipart: foto (la misma que se analizó), constancia y datos (JSON).
+  // @Post responde 201 por defecto
+  @Post()
+  @UseInterceptors(FileInterceptor('foto', opcionesFoto))
+  @UseFilters(FotoDemasiadoGrandeFilter)
+  async crear(
+    @Req() request: PeticionAsegurado,
+    @UploadedFile() foto: ArchivoFoto | undefined,
+    @Body('constancia') constancia: unknown,
+    @Body('datos') datos: unknown,
+  ): Promise<AccidenteCreado> {
+    if (!foto) {
+      throw new BadRequestException('Falta la foto');
+    }
+    if (typeof constancia !== 'string' || !constancia) {
+      throw new BadRequestException('Falta la constancia de la foto');
+    }
+    const dto = await leerCrearAccidenteDto(datos);
+    return this.accidentesService.crear(
+      request.aseguradoId,
+      foto,
+      constancia,
+      dto,
+    );
+  }
 
   // Un turno de la entrevista: no crea nada, por eso responde 200
   @Post('chat')

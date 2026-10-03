@@ -1,10 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import {
   BadGatewayException,
+  BadRequestException,
   Injectable,
+  InternalServerErrorException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { GEMINI_FALLO, GeminiService } from '../gemini/gemini.service.js';
+import { SupabaseService } from '../supabase/supabase.service.js';
 import type {
+  AccidenteCreado,
   AnalisisFoto,
   ArchivoFoto,
   DatosAccidente,
@@ -12,19 +17,103 @@ import type {
   RespuestaChat,
 } from './accidentes.types.js';
 import type { ChatDto } from './dto/chat.dto.js';
+import type { CrearAccidenteDto } from './dto/crear-accidente.dto.js';
 import { ESQUEMA_RESPUESTA_CHAT, instruccionesEntrevista } from './prompt.js';
 import {
   firmarConstancia,
   huellaSha256,
   VIGENCIA_CONSTANCIA_MS,
+  verificarConstancia,
 } from './constancia.js';
 
 export const MENSAJE_NO_PROCEDE =
   'No procede: la foto no muestra un accidente vehicular.';
+export const CONSTANCIA_INVALIDA =
+  'La foto no coincide con la analizada o su análisis venció; vuelve a enviarla';
+
+export const BUCKET_FOTOS = 'accidentes-fotos';
+
+const EXTENSIONES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
 
 @Injectable()
 export class AccidentesService {
-  constructor(private readonly gemini: GeminiService) {}
+  constructor(
+    private readonly gemini: GeminiService,
+    private readonly supabase: SupabaseService,
+  ) {}
+
+  // Guarda el accidente solo si la constancia es válida, es de este asegurado
+  // y corresponde a esta foto exacta; la descripción y la gravedad salen de ella
+  async crear(
+    aseguradoId: string,
+    foto: ArchivoFoto,
+    constancia: string,
+    dto: CrearAccidenteDto,
+  ): Promise<AccidenteCreado> {
+    const secreto = secretoConstancia();
+    const analisis = verificarConstancia(
+      constancia,
+      { aseguradoId, fotoSha256: huellaSha256(foto.buffer) },
+      secreto,
+    );
+    if (!analisis) {
+      throw new BadRequestException(CONSTANCIA_INVALIDA);
+    }
+
+    const tieneCoordenadas =
+      dto.latitud !== undefined && dto.longitud !== undefined;
+    if (!tieneCoordenadas && !dto.direccion) {
+      throw new BadRequestException('Falta la ubicación del accidente');
+    }
+
+    const ruta = `${aseguradoId}/${randomUUID()}.${EXTENSIONES[foto.mimetype]}`;
+    const fotos = this.supabase.admin.storage.from(BUCKET_FOTOS);
+    const { error: errorFoto } = await fotos.upload(ruta, foto.buffer, {
+      contentType: foto.mimetype,
+      upsert: false,
+    });
+    if (errorFoto) {
+      throw new InternalServerErrorException('No se pudo guardar la foto');
+    }
+
+    const { data, error } = await this.supabase.admin
+      .from('accidentes')
+      .insert({
+        asegurado_id: aseguradoId,
+        estado: 'pendiente',
+        fecha_hora_accidente: dto.fechaHoraAccidente,
+        resumen: dto.resumen.trim(),
+        asegurado_bien: dto.aseguradoBien,
+        latitud: tieneCoordenadas ? dto.latitud : null,
+        longitud: tieneCoordenadas ? dto.longitud : null,
+        direccion: dto.direccion?.trim() || null,
+        vehiculo_marca: dto.vehiculoMarca.trim(),
+        vehiculo_modelo: dto.vehiculoModelo.trim(),
+        vehiculo_placas: dto.vehiculoPlacas.trim(),
+        hay_terceros: dto.hayTerceros,
+        terceros_descripcion: dto.hayTerceros
+          ? dto.tercerosDescripcion!.trim()
+          : null,
+        foto_path: ruta,
+        foto_descripcion: analisis.descripcion,
+        gravedad: analisis.gravedad,
+      })
+      .select('id, estado')
+      .single();
+    if (error) {
+      // No deben quedar fotos sin accidente en el bucket
+      await fotos.remove([ruta]);
+      throw new InternalServerErrorException(
+        'No se pudo registrar el accidente',
+      );
+    }
+
+    return { id: data.id, estado: data.estado };
+  }
 
   // Analiza la foto con Gemini; no guarda nada. Si procede, devuelve la
   // constancia firmada que amarra el análisis a esta foto y a este asegurado

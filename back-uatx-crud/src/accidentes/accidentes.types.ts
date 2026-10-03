@@ -30,6 +30,12 @@ export interface DatosAccidente {
   tercerosDescripcion?: string;
 }
 
+// Respuesta de POST /accidentes
+export interface AccidenteCreado {
+  id: string;
+  estado: 'pendiente';
+}
+
 export type EtapaChat = 'entrevista' | 'confirmacion';
 
 // Respuesta de POST /accidentes/chat
