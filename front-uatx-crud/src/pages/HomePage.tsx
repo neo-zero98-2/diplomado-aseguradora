@@ -34,7 +34,9 @@ function HomePage() {
         sx={{
           maxWidth: 1280,
           mx: 'auto',
-          p: { xs: 2, md: 4 },
+          // Sin `p` responsivo: sus media queries pisarían a `pb`
+          px: { xs: 2, md: 4 },
+          pt: { xs: 2, md: 4 },
           // Ambos roles tienen chat flotante: deja libre el alto del botón
           // para que no tape la tabla
           pb: 12,
