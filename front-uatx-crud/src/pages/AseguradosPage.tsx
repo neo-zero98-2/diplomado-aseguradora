@@ -17,14 +17,7 @@ import { actualizar, crear, eliminar, listar } from '../asegurados/api.ts'
 import type { Asegurado } from '../asegurados/types.ts'
 import { useSesionExpirada } from '../auth/useSesionExpirada.ts'
 import { useAppSelector } from '../store/index.ts'
-
-// Minúsculas y sin acentos, para que "perez" encuentre a "Pérez"
-function normalizar(texto: string) {
-  return texto
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-}
+import { normalizar } from '../utils/texto.ts'
 
 function AseguradosPage() {
   const token = useAppSelector((state) => state.auth.accessToken)

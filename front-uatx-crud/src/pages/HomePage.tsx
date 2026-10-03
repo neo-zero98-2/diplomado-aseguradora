@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Box, Button, Stack } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
+import AccidentesTabla from '../accidentes/AccidentesTabla.tsx'
 import ChatFlotante from '../accidentes/ChatFlotante.tsx'
 import MisAccidentesTabla from '../accidentes/MisAccidentesTabla.tsx'
 import AppHeader from '../components/AppHeader.tsx'
@@ -62,7 +63,7 @@ function HomePage() {
           {esAsegurado && (
             <MisAccidentesTabla recarga={recargaMisAccidentes} />
           )}
-          {/* Aquí va la tabla de accidentes del asegurador (paso 12) */}
+          {perfil.rol === 'asegurador' && <AccidentesTabla />}
         </Stack>
       </Box>
       {esAsegurado && (
