@@ -1,7 +1,14 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from 'react'
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   IconButton,
   Paper,
@@ -13,18 +20,33 @@ import {
 import { ApiError } from '../api/peticion.ts'
 import { useSesionExpirada } from '../auth/useSesionExpirada.ts'
 import { useAppSelector } from '../store/index.ts'
-import { conversar } from './api.ts'
+import { analizarFoto, conversar } from './api.ts'
+import { PREFIJO_FOTO_VALIDADA } from './mensajes.ts'
 import type { MensajeChat } from './types.ts'
 
-const PREGUNTA_INICIAL: MensajeChat = {
+// Lo que se muestra en el chat; al backend solo viajan rol y texto
+interface MensajeVisible extends MensajeChat {
+  fotoUrl?: string // vista previa local de la foto adjunta
+}
+
+// La foto que procedió y su constancia; se usan al confirmar el accidente
+interface FotoValidada {
+  archivo: File
+  constancia: string
+}
+
+const PREGUNTA_INICIAL: MensajeVisible = {
   rol: 'asistente',
   texto: '¿Estás bien?',
 }
 
-// Mismos límites que ChatDto en el backend
+// Mismos límites que el backend (ChatDto y la subida de la foto)
 const MAXIMO_CARACTERES = 2000
+const TAMANO_MAXIMO_FOTO = 5 * 1024 * 1024
+const TIPOS_FOTO = ['image/jpeg', 'image/png', 'image/webp']
 
 const ERROR_ASISTENTE = 'No se pudo contactar al asistente, inténtalo de nuevo'
+const ERROR_FOTO = 'No se pudo analizar la foto, inténtalo de nuevo'
 
 function IconoEnviar() {
   return (
@@ -34,54 +56,167 @@ function IconoEnviar() {
   )
 }
 
-// Entrevista guiada por Gemini para reportar un accidente. La conversación vive
-// solo aquí: se manda completa en cada turno y recargar la página la reinicia
+function IconoCamara() {
+  return (
+    <SvgIcon fontSize="small">
+      <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4" />
+      <path d="M9 2 7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5" />
+    </SvgIcon>
+  )
+}
+
+function aHistorial(mensajes: MensajeVisible[]): MensajeChat[] {
+  return mensajes.map(({ rol, texto }) => ({ rol, texto }))
+}
+
+// Entrevista guiada por Gemini para reportar un accidente. La conversación, la
+// foto validada y su constancia viven solo aquí: se manda el historial completo
+// en cada turno y recargar la página la reinicia
 function ChatAccidente() {
   const token = useAppSelector((state) => state.auth.accessToken)
   const manejarSesionExpirada = useSesionExpirada()
-  const [mensajes, setMensajes] = useState<MensajeChat[]>([PREGUNTA_INICIAL])
+  const [mensajes, setMensajes] = useState<MensajeVisible[]>([PREGUNTA_INICIAL])
   const [texto, setTexto] = useState('')
-  const [escribiendo, setEscribiendo] = useState(false)
+  const [ocupado, setOcupado] = useState<'escribiendo' | 'analizando' | null>(
+    null,
+  )
   const [error, setError] = useState<string | null>(null)
+  const [, setFotoValidada] = useState<FotoValidada | null>(null)
+  // La foto no mostró un accidente: la conversación terminó
+  const [noProcede, setNoProcede] = useState(false)
   const finRef = useRef<HTMLDivElement>(null)
   const campoRef = useRef<HTMLInputElement>(null)
+  const archivoRef = useRef<HTMLInputElement>(null)
+  // URLs de las vistas previas, para liberarlas al limpiar el chat
+  const urlsRef = useRef<string[]>([])
 
   // Mantiene visible el último mensaje
   useEffect(() => {
     finRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [mensajes, escribiendo])
+  }, [mensajes, ocupado])
+
+  useEffect(() => {
+    const urls = urlsRef.current
+    return () => urls.forEach((url) => URL.revokeObjectURL(url))
+  }, [])
+
+  // Pide a Gemini el siguiente mensaje; devuelve false si falló
+  async function pedirRespuesta(historial: MensajeVisible[]) {
+    if (!token) return false
+    setOcupado('escribiendo')
+    try {
+      const respuesta = await conversar(token, aHistorial(historial))
+      setMensajes([
+        ...historial,
+        { rol: 'asistente', texto: respuesta.mensaje },
+      ])
+      return true
+    } catch (e) {
+      if (manejarSesionExpirada(e)) return false
+      setError(
+        e instanceof ApiError && e.status === 400 ? e.message : ERROR_ASISTENTE,
+      )
+      return false
+    } finally {
+      setOcupado(null)
+    }
+  }
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
     const limpio = texto.trim()
-    if (!limpio || escribiendo || !token) return
+    if (!limpio || ocupado || noProcede) return
 
-    const historial: MensajeChat[] = [
+    const historial: MensajeVisible[] = [
       ...mensajes,
       { rol: 'usuario', texto: limpio },
     ]
     setMensajes(historial)
     setTexto('')
     setError(null)
-    setEscribiendo(true)
-    try {
-      const respuesta = await conversar(token, historial)
-      setMensajes([
-        ...historial,
-        { rol: 'asistente', texto: respuesta.mensaje },
-      ])
-    } catch (e) {
-      if (manejarSesionExpirada(e)) return
+    const ok = await pedirRespuesta(historial)
+    if (!ok) {
       // Se conserva la conversación: el mensaje vuelve al campo para reintentar
       setMensajes(mensajes)
       setTexto(limpio)
-      setError(
-        e instanceof ApiError && e.status === 400 ? e.message : ERROR_ASISTENTE,
-      )
-    } finally {
-      setEscribiendo(false)
-      campoRef.current?.focus()
     }
+    campoRef.current?.focus()
+  }
+
+  async function adjuntarFoto(evento: ChangeEvent<HTMLInputElement>) {
+    const archivo = evento.target.files?.[0]
+    // Permite volver a elegir el mismo archivo
+    evento.target.value = ''
+    if (!archivo || !token || ocupado || noProcede) return
+
+    setError(null)
+    if (!TIPOS_FOTO.includes(archivo.type)) {
+      setError('La foto debe ser JPEG, PNG o WebP')
+      return
+    }
+    if (archivo.size > TAMANO_MAXIMO_FOTO) {
+      setError('La foto debe pesar máximo 5 MB')
+      return
+    }
+
+    const fotoUrl = URL.createObjectURL(archivo)
+    urlsRef.current.push(fotoUrl)
+    setMensajes([
+      ...mensajes,
+      { rol: 'usuario', texto: 'Foto del accidente', fotoUrl },
+    ])
+    setOcupado('analizando')
+
+    let analisis
+    try {
+      analisis = await analizarFoto(token, archivo)
+    } catch (e) {
+      setOcupado(null)
+      if (manejarSesionExpirada(e)) return
+      setMensajes(mensajes)
+      setError(
+        e instanceof ApiError && e.status === 400 ? e.message : ERROR_FOTO,
+      )
+      return
+    }
+
+    if (!analisis.procede) {
+      setOcupado(null)
+      setMensajes([
+        ...mensajes,
+        { rol: 'usuario', texto: 'Foto del accidente', fotoUrl },
+        { rol: 'asistente', texto: analisis.mensaje },
+      ])
+      setNoProcede(true)
+      return
+    }
+
+    // Una foto nueva que procede reemplaza a la anterior
+    setFotoValidada({ archivo, constancia: analisis.constancia })
+    // El resultado entra al historial para que Gemini sepa que ya tiene la foto
+    const historial: MensajeVisible[] = [
+      ...mensajes,
+      {
+        rol: 'usuario',
+        texto: `${PREFIJO_FOTO_VALIDADA} ${analisis.descripcion} Gravedad: ${analisis.gravedad}.`,
+        fotoUrl,
+      },
+    ]
+    setMensajes(historial)
+    // Si Gemini falla, la foto validada se queda en el historial y la
+    // conversación sigue con el siguiente mensaje del asegurado
+    await pedirRespuesta(historial)
+  }
+
+  // Descarta la conversación, la foto validada y su constancia
+  function nuevoReporte() {
+    urlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    urlsRef.current = []
+    setMensajes([PREGUNTA_INICIAL])
+    setTexto('')
+    setError(null)
+    setFotoValidada(null)
+    setNoProcede(false)
   }
 
   return (
@@ -113,13 +248,24 @@ function ChatAccidente() {
         {mensajes.map((mensaje, indice) => (
           <Burbuja key={indice} mensaje={mensaje} />
         ))}
-        {escribiendo && (
+        {ocupado && (
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <CircularProgress size={14} />
             <Typography variant="body2" color="text.secondary">
-              Gemini está escribiendo…
+              {ocupado === 'analizando'
+                ? 'Gemini está analizando la foto…'
+                : 'Gemini está escribiendo…'}
             </Typography>
           </Stack>
+        )}
+        {noProcede && (
+          <Button
+            variant="contained"
+            onClick={nuevoReporte}
+            sx={{ alignSelf: 'center' }}
+          >
+            Nuevo reporte
+          </Button>
         )}
         <div ref={finRef} />
       </Stack>
@@ -135,6 +281,23 @@ function ChatAccidente() {
         onSubmit={enviar}
         sx={{ display: 'flex', gap: 1, p: 2, alignItems: 'flex-end' }}
       >
+        <input
+          ref={archivoRef}
+          type="file"
+          accept="image/*"
+          // En móvil abre la cámara trasera; en escritorio se ignora
+          capture="environment"
+          hidden
+          onChange={adjuntarFoto}
+        />
+        <IconButton
+          aria-label="Adjuntar foto"
+          disabled={!!ocupado || noProcede}
+          onClick={() => archivoRef.current?.click()}
+          sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
+        >
+          <IconoCamara />
+        </IconButton>
         <TextField
           inputRef={campoRef}
           value={texto}
@@ -151,7 +314,7 @@ function ChatAccidente() {
           fullWidth
           multiline
           maxRows={4}
-          disabled={escribiendo}
+          disabled={!!ocupado || noProcede}
           slotProps={{
             htmlInput: {
               maxLength: MAXIMO_CARACTERES,
@@ -163,7 +326,7 @@ function ChatAccidente() {
           type="submit"
           color="primary"
           aria-label="Enviar"
-          disabled={escribiendo || !texto.trim()}
+          disabled={!!ocupado || noProcede || !texto.trim()}
           sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
         >
           <IconoEnviar />
@@ -173,7 +336,7 @@ function ChatAccidente() {
   )
 }
 
-function Burbuja({ mensaje }: { mensaje: MensajeChat }) {
+function Burbuja({ mensaje }: { mensaje: MensajeVisible }) {
   const esUsuario = mensaje.rol === 'usuario'
   return (
     <Box
@@ -189,6 +352,21 @@ function Burbuja({ mensaje }: { mensaje: MensajeChat }) {
         wordBreak: 'break-word',
       }}
     >
+      {mensaje.fotoUrl && (
+        <Box
+          component="img"
+          src={mensaje.fotoUrl}
+          alt="Foto del accidente"
+          sx={{
+            display: 'block',
+            width: '100%',
+            maxHeight: 200,
+            objectFit: 'cover',
+            borderRadius: 1,
+            mb: 0.5,
+          }}
+        />
+      )}
       <Typography variant="body2">{mensaje.texto}</Typography>
     </Box>
   )
