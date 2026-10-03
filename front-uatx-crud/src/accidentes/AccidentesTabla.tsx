@@ -43,9 +43,15 @@ import type {
 
 type FiltroEstado = EstadoAccidente | 'todos'
 
+interface AccidentesTablaProps {
+  // Cambia cada vez que se guarda un accidente desde el chat: la tabla se recarga
+  recarga: number
+}
+
 // Herramienta de trabajo del asegurador en /home. Pide la lista una vez; el
-// filtro por estado y la búsqueda se hacen en el cliente, sin peticiones nuevas
-function AccidentesTabla() {
+// filtro por estado y la búsqueda se hacen en el cliente, sin peticiones nuevas,
+// salvo cuando `recarga` cambia
+function AccidentesTabla({ recarga }: AccidentesTablaProps) {
   const token = useAppSelector((state) => state.auth.accessToken)
   const manejarSesionExpirada = useSesionExpirada()
   const [accidentes, setAccidentes] = useState<AccidenteAsegurador[] | null>(
@@ -86,7 +92,7 @@ function AccidentesTabla() {
     return () => {
       vigente = false
     }
-  }, [token, manejarError, intento])
+  }, [token, manejarError, recarga, intento])
 
   // Un 401 cierra la sesión; cualquier error se relanza para que el diálogo
   // muestre el mensaje sin cerrarse

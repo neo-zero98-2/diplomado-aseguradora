@@ -92,6 +92,30 @@ describe('AccidentesAseguradorService', () => {
     });
   });
 
+  it('obtener devuelve el accidente con los datos de su asegurado', async () => {
+    const { supabase, llamadas } = crearSupabaseFalso({
+      data: FILA,
+      error: null,
+    });
+    const servicio = new AccidentesAseguradorService(supabase);
+
+    const accidente = await servicio.obtener(ID);
+
+    expect(llamadas.eq).toContainEqual(['id', ID]);
+    expect(accidente).toMatchObject({
+      id: ID,
+      vehiculoPlacas: 'TLX-123-A',
+      asegurado: { nombre: 'Ana López', idContrato: 'CTR-01' },
+    });
+  });
+
+  it('obtener un accidente inexistente responde 404', async () => {
+    const { supabase } = crearSupabaseFalso({ data: null, error: null });
+    const servicio = new AccidentesAseguradorService(supabase);
+
+    await expect(servicio.obtener(ID)).rejects.toThrow(NotFoundException);
+  });
+
   it('actualizar escribe el estado, la nota sin espacios, el asegurador y la fecha', async () => {
     const actualizado = {
       ...FILA,

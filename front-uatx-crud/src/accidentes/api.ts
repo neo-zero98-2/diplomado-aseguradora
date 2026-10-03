@@ -4,11 +4,13 @@ import type {
   AccidenteCreado,
   ActualizarAccidenteDto,
   AnalisisFoto,
+  ConsultaAsegurador,
   CrearAccidenteDto,
   FotoAccidente,
   MensajeChat,
   MiAccidente,
   RespuestaChat,
+  RespuestaConsulta,
 } from './types.ts'
 
 // Gemini analiza la foto; si procede, devuelve la constancia para crearAccidente
@@ -71,4 +73,22 @@ export function eliminarAccidente(token: string, id: string) {
 // Asegurado: solo sus accidentes
 export function listarMisAccidentes(token: string) {
   return peticion<MiAccidente[]>(token, 'GET', '/accidentes/mios')
+}
+
+// Asegurador: un turno del chat de consulta; se manda el historial completo
+export function consultarAccidentes(
+  token: string,
+  consulta: ConsultaAsegurador,
+) {
+  return peticion<RespuestaConsulta>(
+    token,
+    'POST',
+    '/accidentes/consulta',
+    consulta,
+  )
+}
+
+// Asegurador: un accidente, para abrir el detalle desde el chat
+export function obtenerAccidente(token: string, id: string) {
+  return peticion<AccidenteAsegurador>(token, 'GET', `/accidentes/${id}`)
 }

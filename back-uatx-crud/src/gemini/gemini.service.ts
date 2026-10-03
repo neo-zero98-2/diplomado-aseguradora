@@ -4,9 +4,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
+  FunctionCallingConfigMode,
   GoogleGenAI,
   type Content,
   type ContentListUnion,
+  type FunctionDeclaration,
+  type GenerateContentResponse,
+  type Part,
 } from '@google/genai';
 import { GRAVEDADES, type Gravedad } from '../accidentes/constancia.js';
 
@@ -47,6 +51,18 @@ const ESQUEMA_ANALISIS = {
   },
   required: ['esAccidente', 'descripcion', 'gravedad'],
 };
+
+export interface PeticionConHerramientas {
+  instrucciones: string;
+  mensajes: MensajeConversacion[];
+  herramientas: FunctionDeclaration[];
+  // Herramienta con la que Gemini cierra el turno; sus argumentos son la respuesta
+  herramientaFinal: string;
+  // Ejecuta las demás herramientas; lo que devuelve se le pasa a Gemini
+  ejecutar: (nombre: string, args: Record<string, unknown>) => unknown;
+  // Rondas de herramientas permitidas antes de llamar a la final
+  maxRondas: number;
+}
 
 interface PeticionJson {
   contenido: ContentListUnion;
@@ -131,6 +147,70 @@ export class GeminiService {
       contenido: aContenidos(peticion.mensajes),
       esquema: peticion.esquema,
     });
+  }
+
+  // Ciclo de function calling: Gemini está obligado a llamar herramientas
+  // (mode ANY); cada ronda ejecuta las que pidió y le devuelve los resultados,
+  // hasta que llama a la herramienta final. Pasar de maxRondas responde 502
+  async conversarConHerramientas(
+    peticion: PeticionConHerramientas,
+  ): Promise<Record<string, unknown>> {
+    const { ai, modelo } = this.configuracion();
+    const contenidos = aContenidos(peticion.mensajes);
+
+    for (let ronda = 0; ; ronda++) {
+      let respuesta: GenerateContentResponse;
+      try {
+        respuesta = await ai.models.generateContent({
+          model: modelo,
+          contents: contenidos,
+          config: {
+            systemInstruction: peticion.instrucciones,
+            tools: [{ functionDeclarations: peticion.herramientas }],
+            toolConfig: {
+              functionCallingConfig: { mode: FunctionCallingConfigMode.ANY },
+            },
+          },
+        });
+      } catch {
+        throw new BadGatewayException(GEMINI_FALLO);
+      }
+
+      const llamadas = respuesta.functionCalls ?? [];
+      const final = llamadas.find((l) => l.name === peticion.herramientaFinal);
+      if (final) {
+        return final.args ?? {};
+      }
+      // Sin llamadas (no debería pasar con mode ANY) o sin rondas disponibles
+      if (llamadas.length === 0 || ronda >= peticion.maxRondas) {
+        throw new BadGatewayException(GEMINI_FALLO);
+      }
+
+      // Se conserva el turno del modelo tal cual: con Gemini 3 trae las firmas
+      // de pensamiento que la siguiente ronda necesita
+      contenidos.push(
+        respuesta.candidates?.[0]?.content ?? {
+          role: 'model',
+          parts: llamadas.map((functionCall) => ({ functionCall })),
+        },
+      );
+
+      const resultados: Part[] = [];
+      for (const llamada of llamadas) {
+        const resultado = await peticion.ejecutar(
+          llamada.name ?? '',
+          llamada.args ?? {},
+        );
+        resultados.push({
+          functionResponse: {
+            id: llamada.id,
+            name: llamada.name,
+            response: { output: resultado },
+          },
+        });
+      }
+      contenidos.push({ role: 'user', parts: resultados });
+    }
   }
 
   private configuracion(): { ai: GoogleGenAI; modelo: string } {

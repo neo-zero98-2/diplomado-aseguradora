@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Box, Fab, IconButton, SvgIcon, Tooltip } from '@mui/material'
-import ChatAccidente from './ChatAccidente.tsx'
 
 function IconoChat() {
   return (
@@ -19,22 +18,26 @@ function IconoCerrar() {
 }
 
 interface ChatFlotanteProps {
-  onAccidenteRegistrado?: () => void
+  // Tooltip del botón y nombre accesible del panel, p. ej. "Chat con IA Gemini"
+  etiqueta: string
+  // El chat que va dentro del panel; recibe el botón para cerrarlo, que se
+  // dibuja en su encabezado
+  children: (accionCerrar: ReactNode) => ReactNode
 }
 
-// Botón flotante en la esquina inferior derecha que abre el chat de Gemini.
-// Cerrar solo oculta el panel: ChatAccidente sigue montado y la conversación,
-// la foto y su constancia se conservan hasta recargar la página
-function ChatFlotante({ onAccidenteRegistrado }: ChatFlotanteProps) {
+// Botón flotante en la esquina inferior derecha que abre un chat de Gemini.
+// Cerrar solo oculta el panel: el chat sigue montado y su conversación (y, en
+// el del asegurado, la foto y su constancia) se conserva hasta recargar la página
+function ChatFlotante({ etiqueta, children }: ChatFlotanteProps) {
   const [abierto, setAbierto] = useState(false)
 
   return (
     <>
       {!abierto && (
-        <Tooltip title="Chat con IA Gemini" placement="left">
+        <Tooltip title={etiqueta} placement="left">
           <Fab
             color="primary"
-            aria-label="Abrir chat con IA Gemini"
+            aria-label={`Abrir ${etiqueta.charAt(0).toLowerCase()}${etiqueta.slice(1)}`}
             onClick={() => setAbierto(true)}
             sx={{ position: 'fixed', right: 24, bottom: 24 }}
           >
@@ -45,7 +48,7 @@ function ChatFlotante({ onAccidenteRegistrado }: ChatFlotanteProps) {
 
       <Box
         role="dialog"
-        aria-label="Chat con IA Gemini"
+        aria-label={etiqueta}
         aria-hidden={!abierto}
         sx={{
           display: abierto ? 'block' : 'none',
@@ -64,18 +67,15 @@ function ChatFlotante({ onAccidenteRegistrado }: ChatFlotanteProps) {
           overflow: 'hidden',
         }}
       >
-        <ChatAccidente
-          onAccidenteRegistrado={onAccidenteRegistrado}
-          accionEncabezado={
-            <IconButton
-              aria-label="Cerrar chat"
-              onClick={() => setAbierto(false)}
-              edge="end"
-            >
-              <IconoCerrar />
-            </IconButton>
-          }
-        />
+        {children(
+          <IconButton
+            aria-label="Cerrar chat"
+            onClick={() => setAbierto(false)}
+            edge="end"
+          >
+            <IconoCerrar />
+          </IconButton>,
+        )}
       </Box>
     </>
   )

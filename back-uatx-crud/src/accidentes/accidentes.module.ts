@@ -6,10 +6,15 @@ import { AccidentesAseguradorController } from './accidentes-asegurador.controll
 import { AccidentesAseguradorService } from './accidentes-asegurador.service.js';
 import { AccidentesController } from './accidentes.controller.js';
 import { AccidentesService } from './accidentes.service.js';
+import { ConsultaAseguradorService } from './consulta-asegurador.service.js';
 
 @Module({
   imports: [SupabaseModule, AuthModule, GeminiModule],
   controllers: [AccidentesController, AccidentesAseguradorController],
-  providers: [AccidentesService, AccidentesAseguradorService],
+  providers: [
+    AccidentesService,
+    AccidentesAseguradorService,
+    ConsultaAseguradorService,
+  ],
 })
 export class AccidentesModule {}

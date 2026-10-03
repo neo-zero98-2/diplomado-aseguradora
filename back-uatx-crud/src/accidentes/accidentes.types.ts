@@ -95,3 +95,20 @@ export interface RespuestaChat {
   sugerir911: boolean;
   datos: Partial<DatosAccidente>;
 }
+
+// Elemento de la lista "Ver" de POST /accidentes/consulta; lo arma el backend
+// desde la base de datos, no desde lo que escribe Gemini
+export interface AccidenteMencionado {
+  id: string;
+  aseguradoNombre: string;
+  vehiculoPlacas: string;
+  estado: EstadoAccidente;
+  gravedad: Gravedad;
+  fechaHoraAccidente: string; // ISO 8601
+}
+
+// Respuesta de POST /accidentes/consulta (asegurador)
+export interface RespuestaConsulta {
+  mensaje: string; // texto plano, sin Markdown
+  accidentes: AccidenteMencionado[]; // máx. 10
+}

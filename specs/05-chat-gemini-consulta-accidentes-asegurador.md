@@ -1,6 +1,6 @@
 # SPEC 05 — Chat con IA Gemini para que el asegurador consulte los accidentes
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 02, SPEC 03, SPEC 04
 > **Date:** 2026-10-03
 > **Objective:** Agregar en `/home` un chat flotante de solo lectura donde el asegurador le pregunta a Gemini por los accidentes (cuántos hay en cada estado, a quién pertenecen y sus detalles), y Gemini responde con datos que el backend consulta en Supabase mediante function calling.
@@ -137,30 +137,30 @@ Conventions:
 
 ## Acceptance criteria
 
-- [ ] `POST /accidentes/consulta` y `GET /accidentes/:id` responden 401 sin token y 403 con el token de un asegurado.
-- [ ] `GET /accidentes/mios` con token de asegurado sigue respondiendo 200 con sus accidentes.
-- [ ] `GET /accidentes/:id` con token de asegurador responde 200 con el `AccidenteAsegurador`, y 404 con un id que no existe.
-- [ ] `POST /accidentes/consulta` responde 400 con body vacío, más de 40 mensajes, un mensaje de más de 2000 caracteres, un último mensaje del asistente o una zona horaria inválida.
-- [ ] Sin `GEMINI_API_KEY` en el `.env`, el backend arranca, la tabla de accidentes funciona y `POST /accidentes/consulta` responde 503.
-- [ ] Preguntar "¿cuántos accidentes hay pendientes?" responde el mismo número que muestra la tabla con el filtro "Pendiente".
-- [ ] Preguntar cuántos hay en cada estado responde los mismos números que la tabla con cada filtro.
-- [ ] Preguntar por los accidentes de un asegurado por su nombre o su `idContrato` responde sus accidentes y los lista con "Ver".
-- [ ] Preguntar por un accidente por sus placas responde a quién pertenece (nombre e `idContrato`) y su estado.
-- [ ] Ningún accidente de la lista "Ver" es inventado: todos existen en la tabla, y nunca hay más de 10.
-- [ ] Preguntar algo ajeno (p. ej. "¿quién ganó el mundial?") responde que solo ayuda con accidentes y sus asegurados, sin lista de accidentes.
-- [ ] Pedir "aprueba el accidente de las placas X" no cambia nada en la base de datos, y la respuesta indica que se hace desde "Ver".
-- [ ] La API key de Gemini no aparece en el código del frontend ni en ninguna petición del navegador.
-- [ ] Como asegurador, `/home` muestra un botón flotante en la esquina inferior derecha; al abrirlo aparece el saludo y las tres preguntas sugeridas, sin peticiones a `/accidentes/consulta`.
-- [ ] Hacer clic en una sugerencia la manda como mensaje y muestra la respuesta de Gemini.
-- [ ] "Ver" abre el detalle encima del chat con los datos del asegurado, el reporte, la foto y el formulario de estado.
-- [ ] Cambiar el estado desde ese detalle y guardar actualiza la fila en la tabla de accidentes sin recargar la página.
-- [ ] La cruz cierra el panel, y al reabrirlo la conversación sigue donde estaba.
-- [ ] "Nueva conversación" borra los mensajes y vuelve a mostrar el saludo y las sugerencias.
-- [ ] En móvil, el chat abierto ocupa toda la pantalla, la cruz lo cierra y el botón flotante no tapa la última fila de la tabla.
-- [ ] Como asegurado, el chat de la SPEC 03 se abre, conversa y registra accidentes igual que antes.
-- [ ] Las pruebas de Vitest de `obtener()`, las herramientas, `conversarConHerramientas()` y `ConsultaAseguradorService` pasan con `npm test`.
-- [ ] `/home` se revisó con Playwright para ambos roles en escritorio y móvil, sin errores en la consola.
-- [ ] `npm run lint` y `npm run build` pasan sin errores en `back-uatx-crud` y en `front-uatx-crud`.
+- [x] `POST /accidentes/consulta` y `GET /accidentes/:id` responden 401 sin token y 403 con el token de un asegurado.
+- [x] `GET /accidentes/mios` con token de asegurado sigue respondiendo 200 con sus accidentes.
+- [x] `GET /accidentes/:id` con token de asegurador responde 200 con el `AccidenteAsegurador`, y 404 con un id que no existe.
+- [x] `POST /accidentes/consulta` responde 400 con body vacío, más de 40 mensajes, un mensaje de más de 2000 caracteres, un último mensaje del asistente o una zona horaria inválida.
+- [x] Sin `GEMINI_API_KEY` en el `.env`, el backend arranca, la tabla de accidentes funciona y `POST /accidentes/consulta` responde 503.
+- [x] Preguntar "¿cuántos accidentes hay pendientes?" responde el mismo número que muestra la tabla con el filtro "Pendiente".
+- [x] Preguntar cuántos hay en cada estado responde los mismos números que la tabla con cada filtro.
+- [x] Preguntar por los accidentes de un asegurado por su nombre o su `idContrato` responde sus accidentes y los lista con "Ver".
+- [x] Preguntar por un accidente por sus placas responde a quién pertenece (nombre e `idContrato`) y su estado.
+- [x] Ningún accidente de la lista "Ver" es inventado: todos existen en la tabla, y nunca hay más de 10.
+- [x] Preguntar algo ajeno (p. ej. "¿quién ganó el mundial?") responde que solo ayuda con accidentes y sus asegurados, sin lista de accidentes.
+- [x] Pedir "aprueba el accidente de las placas X" no cambia nada en la base de datos, y la respuesta indica que se hace desde "Ver".
+- [x] La API key de Gemini no aparece en el código del frontend ni en ninguna petición del navegador.
+- [x] Como asegurador, `/home` muestra un botón flotante en la esquina inferior derecha; al abrirlo aparece el saludo y las tres preguntas sugeridas, sin peticiones a `/accidentes/consulta`.
+- [x] Hacer clic en una sugerencia la manda como mensaje y muestra la respuesta de Gemini.
+- [x] "Ver" abre el detalle encima del chat con los datos del asegurado, el reporte, la foto y el formulario de estado.
+- [x] Cambiar el estado desde ese detalle y guardar actualiza la fila en la tabla de accidentes sin recargar la página.
+- [x] La cruz cierra el panel, y al reabrirlo la conversación sigue donde estaba.
+- [x] "Nueva conversación" borra los mensajes y vuelve a mostrar el saludo y las sugerencias.
+- [x] En móvil, el chat abierto ocupa toda la pantalla, la cruz lo cierra y el botón flotante no tapa la última fila de la tabla.
+- [x] Como asegurado, el chat de la SPEC 03 se abre, conversa y registra accidentes igual que antes.
+- [x] Las pruebas de Vitest de `obtener()`, las herramientas, `conversarConHerramientas()` y `ConsultaAseguradorService` pasan con `npm test`.
+- [x] `/home` se revisó con Playwright para ambos roles en escritorio y móvil, sin errores en la consola.
+- [x] `npm run lint` y `npm run build` pasan sin errores en `back-uatx-crud` y en `front-uatx-crud`.
 
 ## Decisions
 
@@ -187,6 +187,8 @@ Conventions:
 - **Sí:** La conversación se conserva al cerrar el panel y se reinicia con "Nueva conversación" o al recargar.
 - **Sí:** Las preguntas fuera de tema se rechazan amablemente. **No:** un asistente general, más difícil de controlar.
 - **Sí:** `POST /accidentes/consulta` en el controlador del asegurador. `POST /accidentes/chat` ya es del asegurado y no se reutiliza la ruta.
+- **Sí:** `conversarConHerramientas()` recibe además `herramientaFinal`, el nombre de la herramienta que cierra el turno. Así `GeminiService` no depende del nombre `responder`, que vive en `accidentes/` (ajuste hecho durante la implementación).
+- **Sí:** El padding de `/home` se separa en `px` y `pt` responsivos con `pb: 12` fijo. Con `p` responsivo, sus media queries pisaban a `pb` y el botón flotante tapaba la última fila en móvil, también para el asegurado desde la SPEC 04 (corrección hecha durante la revisión con Playwright).
 
 ## Risks
 
