@@ -48,7 +48,7 @@ function HomePage() {
         </Stack>
         {/* En la maqueta el chat arranca un poco más abajo que el botón 911 */}
         {esAsegurado && (
-          <Box sx={{ mt: { md: 6 } }}>
+          <Box sx={{ mt: { md: 6 }, height: { xs: 480, md: 560 } }}>
             <ChatAccidente />
           </Box>
         )}
