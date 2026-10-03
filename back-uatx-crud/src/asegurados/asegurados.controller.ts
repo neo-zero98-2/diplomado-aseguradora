@@ -1,7 +1,17 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { AseguradorGuard } from '../auth/asegurador.guard.js';
 import { AseguradosService } from './asegurados.service.js';
 import type { Asegurado } from './asegurados.types.js';
+import { ActualizarAseguradoDto } from './dto/actualizar-asegurado.dto.js';
 import { CrearAseguradoDto } from './dto/crear-asegurado.dto.js';
 
 @Controller('asegurados')
@@ -18,5 +28,13 @@ export class AseguradosController {
   @Post()
   crear(@Body() dto: CrearAseguradoDto): Promise<Asegurado> {
     return this.aseguradosService.crear(dto);
+  }
+
+  @Patch(':id')
+  actualizar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ActualizarAseguradoDto,
+  ): Promise<Asegurado> {
+    return this.aseguradosService.actualizar(id, dto);
   }
 }
