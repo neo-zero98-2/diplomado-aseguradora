@@ -1,6 +1,6 @@
 # SPEC 03 — Chat con IA Gemini para que el asegurado registre accidentes vehiculares
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 02
 > **Date:** 2026-10-03
 > **Objective:** Agregar en `/home` un chat guiado por Gemini donde el asegurado reporta un accidente vehicular con una foto validada por la IA, su ubicación y sus datos, y el accidente se guarda en Supabase con estado `pendiente`.
@@ -185,31 +185,31 @@ Conventions:
 
 ## Acceptance criteria
 
-- [ ] La tabla `accidentes` existe con RLS habilitado y el bucket `accidentes-fotos` existe como privado, con límite de 5 MB y tipos JPEG/PNG/WebP.
-- [ ] `POST /accidentes/chat`, `POST /accidentes/foto` y `POST /accidentes` responden 401 sin token y 403 con el token de un asegurador.
-- [ ] Sin `GEMINI_API_KEY` en el `.env`, el backend arranca, el login y el CRUD de asegurados funcionan, y `POST /accidentes/chat` responde 503.
-- [ ] La API key de Gemini y `CONSTANCIA_SECRET` no aparecen en el código del frontend ni en ninguna petición del navegador.
-- [ ] `POST /accidentes/foto` con la foto de un choque responde `procede: true`, una descripción, una gravedad y una constancia, y el bucket sigue vacío.
-- [ ] `POST /accidentes/foto` con una foto que no es un accidente (p. ej. un paisaje) responde `procede: false` con un mensaje "No procede", sin constancia, y el bucket sigue vacío.
-- [ ] `POST /accidentes/foto` con un archivo de más de 5 MB o un PDF responde 400.
-- [ ] `POST /accidentes` responde 400 y no sube nada si la constancia está alterada, vencida, es de otro asegurado o se manda con una foto distinta a la analizada.
-- [ ] `POST /accidentes` válido responde 201, la foto aparece en el bucket y la fila queda con `estado = 'pendiente'`, el `asegurado_id` del token y la descripción y gravedad de la constancia.
-- [ ] Después de las pruebas, el bucket solo contiene fotos que corresponden a una fila de `accidentes`.
-- [ ] `DELETE /asegurados/:id` de un asegurado con accidentes responde 409 y el asegurado sigue existiendo.
-- [ ] Como asegurado, `/home` muestra el chat junto a "Datos personales" y "Llamar al 911", con la disposición de `references/ui/pantalla inicio.png`.
-- [ ] Como asegurador, `/home` no muestra el chat.
-- [ ] Al abrir `/home`, el chat pregunta "¿Estás bien?".
-- [ ] Responder que no está bien muestra la recomendación y el botón del 911 dentro del chat, y la entrevista continúa.
-- [ ] El chat no llega a la confirmación sin foto validada, ubicación, fecha y hora, datos del vehículo y terceros.
-- [ ] Negar el permiso de ubicación hace que el chat pida la dirección escrita, y con ella se puede completar el reporte.
-- [ ] Una foto que no procede muestra el mensaje de Gemini y "Nuevo reporte", y no se guarda ningún accidente.
-- [ ] En la confirmación aparecen los datos del vehículo y de los terceros con "Confirmar" y "Corregir".
-- [ ] "Corregir" permite cambiar esos datos en la conversación y vuelve a mostrar la confirmación con los datos nuevos.
-- [ ] "Confirmar" guarda el accidente, muestra "Tu accidente quedó registrado" y deja el chat limpio con el botón "Nuevo reporte", que empieza de nuevo con "¿Estás bien?".
-- [ ] Recargar la página a mitad de la conversación la reinicia y no guarda nada.
-- [ ] Las pruebas de Vitest de `AseguradoGuard`, la constancia, `AccidentesService` y el nuevo caso de `AseguradosService` pasan con `npm test`.
-- [ ] `/home` se revisó con Playwright para ambos roles, sin errores en la consola.
-- [ ] `npm run lint` y `npm run build` pasan sin errores en `back-uatx-crud` y en `front-uatx-crud`.
+- [x] La tabla `accidentes` existe con RLS habilitado y el bucket `accidentes-fotos` existe como privado, con límite de 5 MB y tipos JPEG/PNG/WebP.
+- [x] `POST /accidentes/chat`, `POST /accidentes/foto` y `POST /accidentes` responden 401 sin token y 403 con el token de un asegurador.
+- [x] Sin `GEMINI_API_KEY` en el `.env`, el backend arranca, el login y el CRUD de asegurados funcionan, y `POST /accidentes/chat` responde 503.
+- [x] La API key de Gemini y `CONSTANCIA_SECRET` no aparecen en el código del frontend ni en ninguna petición del navegador.
+- [x] `POST /accidentes/foto` con la foto de un choque responde `procede: true`, una descripción, una gravedad y una constancia, y el bucket sigue vacío.
+- [x] `POST /accidentes/foto` con una foto que no es un accidente (p. ej. un paisaje) responde `procede: false` con un mensaje "No procede", sin constancia, y el bucket sigue vacío.
+- [x] `POST /accidentes/foto` con un archivo de más de 5 MB o un PDF responde 400.
+- [x] `POST /accidentes` responde 400 y no sube nada si la constancia está alterada, vencida, es de otro asegurado o se manda con una foto distinta a la analizada.
+- [x] `POST /accidentes` válido responde 201, la foto aparece en el bucket y la fila queda con `estado = 'pendiente'`, el `asegurado_id` del token y la descripción y gravedad de la constancia.
+- [x] Después de las pruebas, el bucket solo contiene fotos que corresponden a una fila de `accidentes`.
+- [x] `DELETE /asegurados/:id` de un asegurado con accidentes responde 409 y el asegurado sigue existiendo.
+- [x] Como asegurado, `/home` muestra el chat junto a "Datos personales" y "Llamar al 911", con la disposición de `references/ui/pantalla inicio.png`.
+- [x] Como asegurador, `/home` no muestra el chat.
+- [x] Al abrir `/home`, el chat pregunta "¿Estás bien?".
+- [x] Responder que no está bien muestra la recomendación y el botón del 911 dentro del chat, y la entrevista continúa.
+- [x] El chat no llega a la confirmación sin foto validada, ubicación, fecha y hora, datos del vehículo y terceros.
+- [x] Negar el permiso de ubicación hace que el chat pida la dirección escrita, y con ella se puede completar el reporte.
+- [x] Una foto que no procede muestra el mensaje de Gemini y "Nuevo reporte", y no se guarda ningún accidente.
+- [x] En la confirmación aparecen los datos del vehículo y de los terceros con "Confirmar" y "Corregir".
+- [x] "Corregir" permite cambiar esos datos en la conversación y vuelve a mostrar la confirmación con los datos nuevos.
+- [x] "Confirmar" guarda el accidente, muestra "Tu accidente quedó registrado" y deja el chat limpio con el botón "Nuevo reporte", que empieza de nuevo con "¿Estás bien?".
+- [x] Recargar la página a mitad de la conversación la reinicia y no guarda nada.
+- [x] Las pruebas de Vitest de `AseguradoGuard`, la constancia, `AccidentesService` y el nuevo caso de `AseguradosService` pasan con `npm test`.
+- [x] `/home` se revisó con Playwright para ambos roles, sin errores en la consola.
+- [x] `npm run lint` y `npm run build` pasan sin errores en `back-uatx-crud` y en `front-uatx-crud`.
 
 ## Decisions
 
