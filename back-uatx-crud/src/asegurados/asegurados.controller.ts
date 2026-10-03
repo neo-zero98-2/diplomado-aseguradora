@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -36,5 +39,11 @@ export class AseguradosController {
     @Body() dto: ActualizarAseguradoDto,
   ): Promise<Asegurado> {
     return this.aseguradosService.actualizar(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  eliminar(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return this.aseguradosService.eliminar(id);
   }
 }

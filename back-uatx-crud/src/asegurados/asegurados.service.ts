@@ -126,6 +126,18 @@ export class AseguradosService {
     return aAsegurado(data);
   }
 
+  async eliminar(id: string): Promise<void> {
+    await this.buscarFila(id);
+
+    // La fila de asegurados cae por ON DELETE CASCADE
+    const { error } = await this.supabase.admin.auth.admin.deleteUser(id);
+    if (error) {
+      throw new InternalServerErrorException(
+        'No se pudo eliminar el asegurado',
+      );
+    }
+  }
+
   private async buscarFila(id: string): Promise<FilaAsegurado> {
     const { data, error } = await this.supabase.admin
       .from('asegurados')
