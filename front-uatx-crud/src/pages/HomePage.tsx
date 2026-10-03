@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Box, Button, Stack } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import AccidentesTabla from '../accidentes/AccidentesTabla.tsx'
+import ChatAccidente from '../accidentes/ChatAccidente.tsx'
 import ChatFlotante from '../accidentes/ChatFlotante.tsx'
 import MisAccidentesTabla from '../accidentes/MisAccidentesTabla.tsx'
 import AppHeader from '../components/AppHeader.tsx'
@@ -67,9 +68,16 @@ function HomePage() {
         </Stack>
       </Box>
       {esAsegurado && (
-        <ChatFlotante
-          onAccidenteRegistrado={() => setRecargaMisAccidentes((n) => n + 1)}
-        />
+        <ChatFlotante etiqueta="Chat con IA Gemini">
+          {(accionCerrar) => (
+            <ChatAccidente
+              accionEncabezado={accionCerrar}
+              onAccidenteRegistrado={() =>
+                setRecargaMisAccidentes((n) => n + 1)
+              }
+            />
+          )}
+        </ChatFlotante>
       )}
     </>
   )
