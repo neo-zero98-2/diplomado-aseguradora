@@ -64,7 +64,9 @@ El frontend no tiene configurado ningún ejecutor de pruebas; los cambios de UI 
 
 ## Despliegue (Railway)
 
-Solo el backend se despliega en Railway, desde GitHub. La configuración está en `back-uatx-crud/railway.json`: Railpack con Node 24 (`engines` en `package.json`), `npm run build` y luego `npm run start:prod`, con healthcheck en `GET /`. En el servicio de Railway hay que poner **Root Directory** = `/back-uatx-crud` y **Config file path** = `/back-uatx-crud/railway.json`. Las variables son las del `.env.example`, excepto `PORT`, que la inyecta Railway. `CORS_ORIGIN` debe ser la URL del frontend desplegado.
+Ambos subproyectos se despliegan como servicios separados de Railway desde GitHub (rama `main`), con Railpack y Node 24 (`engines` en cada `package.json`). La configuración vive en el panel de Railway: Config as Code está obsoleto, así que `back-uatx-crud/railway.json` solo sirve de referencia.
+- Backend: Root Directory `/back-uatx-crud`, build `npm run build`, start `npm run start:prod`, healthcheck `/`, Watch Paths `/back-uatx-crud/**`. Las variables son las del `.env.example`, excepto `PORT`, que la inyecta Railway. `CORS_ORIGIN` acepta varios orígenes separados por coma (la URL del frontend desplegado y `http://localhost:5173`). URL: `https://diplomado-aseguradora-production.up.railway.app`.
+- Frontend: Root Directory `/front-uatx-crud`, Watch Paths `/front-uatx-crud/**`. Railpack lo sirve como sitio estático con fallback a `index.html`. `VITE_API_URL` se define como variable del servicio y se lee en el build, así que cambiarla requiere redesplegar.
 
 ## Convenciones del backend
 
