@@ -33,6 +33,15 @@ export class AccidentesAseguradorController {
     return this.accidentesAseguradorService.listar();
   }
 
+  // AccidentesController va antes en AccidentesModule, así que GET
+  // /accidentes/mios del asegurado no llega a esta ruta
+  @Get(':id')
+  obtener(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<AccidenteAsegurador> {
+    return this.accidentesAseguradorService.obtener(id);
+  }
+
   @Get(':id/foto')
   obtenerFoto(@Param('id', ParseUUIDPipe) id: string): Promise<FotoAccidente> {
     return this.accidentesAseguradorService.obtenerFoto(id);

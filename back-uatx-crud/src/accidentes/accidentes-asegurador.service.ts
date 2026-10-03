@@ -43,6 +43,22 @@ export class AccidentesAseguradorService {
     return data.map(aAccidenteAsegurador);
   }
 
+  // Un accidente con su asegurado; el chat lo usa para abrir el detalle
+  async obtener(id: string): Promise<AccidenteAsegurador> {
+    const { data, error } = await this.supabase.admin
+      .from('accidentes')
+      .select(SELECT_ACCIDENTE_ASEGURADOR)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) {
+      throw new InternalServerErrorException('No se pudo obtener el accidente');
+    }
+    if (!data) {
+      throw new NotFoundException(ACCIDENTE_NO_ENCONTRADO);
+    }
+    return aAccidenteAsegurador(data);
+  }
+
   // Cambia el estado y/o la nota, y deja registrado quién y cuándo lo hizo
   async actualizar(
     id: string,
