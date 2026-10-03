@@ -19,6 +19,7 @@ import {
   Typography,
 } from '@mui/material'
 import { ApiError } from '../api/peticion.ts'
+import BotonLlamar911 from '../components/BotonLlamar911.tsx'
 import { useSesionExpirada } from '../auth/useSesionExpirada.ts'
 import { useAppSelector } from '../store/index.ts'
 import { analizarFoto, conversar } from './api.ts'
@@ -32,6 +33,7 @@ import type { MensajeChat } from './types.ts'
 // Lo que se muestra en el chat; al backend solo viajan rol y texto
 interface MensajeVisible extends MensajeChat {
   fotoUrl?: string // vista previa local de la foto adjunta
+  sugerir911?: boolean // el asistente recomendó llamar al 911
 }
 
 // La foto que procedió y su constancia; se usan al confirmar el accidente
@@ -144,7 +146,11 @@ function ChatAccidente() {
       const respuesta = await conversar(token, aHistorial(historial))
       setMensajes([
         ...historial,
-        { rol: 'asistente', texto: respuesta.mensaje },
+        {
+          rol: 'asistente',
+          texto: respuesta.mensaje,
+          sugerir911: respuesta.sugerir911,
+        },
       ])
       return true
     } catch (e) {
@@ -414,7 +420,7 @@ function ChatAccidente() {
 
 function Burbuja({ mensaje }: { mensaje: MensajeVisible }) {
   const esUsuario = mensaje.rol === 'usuario'
-  return (
+  const burbuja = (
     <Box
       sx={{
         alignSelf: esUsuario ? 'flex-end' : 'flex-start',
@@ -445,6 +451,25 @@ function Burbuja({ mensaje }: { mensaje: MensajeVisible }) {
       )}
       <Typography variant="body2">{mensaje.texto}</Typography>
     </Box>
+  )
+
+  if (!mensaje.sugerir911) return burbuja
+
+  // El aviso no interrumpe la entrevista: el asegurado puede llamar y seguir
+  return (
+    <>
+      {burbuja}
+      <Alert
+        severity="error"
+        icon={false}
+        sx={{ '& .MuiAlert-message': { width: '100%' } }}
+      >
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          Si tú o alguien más está herido, llama al 911.
+        </Typography>
+        <BotonLlamar911 />
+      </Alert>
+    </>
   )
 }
 
