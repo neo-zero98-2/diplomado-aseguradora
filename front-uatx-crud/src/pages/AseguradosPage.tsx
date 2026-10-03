@@ -10,8 +10,9 @@ import {
   Typography,
 } from '@mui/material'
 import AppHeader from '../components/AppHeader.tsx'
+import AseguradoFormDialog from '../asegurados/AseguradoFormDialog.tsx'
 import AseguradosTabla from '../asegurados/AseguradosTabla.tsx'
-import { listar } from '../asegurados/api.ts'
+import { actualizar, crear, listar } from '../asegurados/api.ts'
 import type { Asegurado } from '../asegurados/types.ts'
 import { useSesionExpirada } from '../auth/useSesionExpirada.ts'
 import { useAppSelector } from '../store/index.ts'
@@ -30,6 +31,10 @@ function AseguradosPage() {
   const [asegurados, setAsegurados] = useState<Asegurado[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
+  // null: cerrado; sin asegurado: crear; con asegurado: editar
+  const [dialogo, setDialogo] = useState<{ asegurado?: Asegurado } | null>(
+    null,
+  )
 
   const manejarError = useCallback(
     (err: unknown) => {
@@ -55,7 +60,7 @@ function AseguradosPage() {
     }
   }, [token, manejarError])
 
-  // Vuelve a pedir la lista (reintento y, más adelante, después de guardar)
+  // Vuelve a pedir la lista (reintento y después de guardar)
   const recargar = useCallback(async () => {
     if (!token) return
     setError(null)
@@ -65,6 +70,19 @@ function AseguradosPage() {
       manejarError(err)
     }
   }, [token, manejarError])
+
+  // Llamadas del diálogo: un 401 cierra la sesión; cualquier error se relanza
+  // para que el diálogo muestre el mensaje sin cerrarse
+  async function guardarYRecargar(accion: (token: string) => Promise<unknown>) {
+    if (!token) return
+    try {
+      await accion(token)
+    } catch (err) {
+      manejarSesionExpirada(err)
+      throw err
+    }
+    await recargar()
+  }
 
   // El filtro es solo en el cliente: no hace peticiones nuevas
   const filtrados = useMemo(() => {
@@ -83,7 +101,10 @@ function AseguradosPage() {
         <Alert
           severity="error"
           action={
-            <Button color="inherit" size="small" onClick={() => void recargar()}
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => void recargar()}
             >
               Reintentar
             </Button>
@@ -111,7 +132,12 @@ function AseguradosPage() {
         </Paper>
       )
     }
-    return <AseguradosTabla asegurados={filtrados} />
+    return (
+      <AseguradosTabla
+        asegurados={filtrados}
+        onEditar={(asegurado) => setDialogo({ asegurado })}
+      />
+    )
   }
 
   return (
@@ -135,9 +161,22 @@ function AseguradosPage() {
             onChange={(e) => setBusqueda(e.target.value)}
             sx={{ width: { xs: '100%', sm: 320 } }}
           />
+          <Button variant="contained" onClick={() => setDialogo({})}>
+            Nuevo asegurado
+          </Button>
         </Stack>
         {contenido()}
       </Box>
+      {dialogo && (
+        <AseguradoFormDialog
+          asegurado={dialogo.asegurado}
+          onCerrar={() => setDialogo(null)}
+          onCrear={(dto) => guardarYRecargar((t) => crear(t, dto))}
+          onActualizar={(id, dto) =>
+            guardarYRecargar((t) => actualizar(t, id, dto))
+          }
+        />
+      )}
     </>
   )
 }
