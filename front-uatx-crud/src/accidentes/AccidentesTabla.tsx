@@ -21,7 +21,8 @@ import { useSesionExpirada } from '../auth/useSesionExpirada.ts'
 import { useAppSelector } from '../store/index.ts'
 import { formatearFechaHora } from '../utils/fechas.ts'
 import { normalizar } from '../utils/texto.ts'
-import { listarAccidentes } from './api.ts'
+import { actualizarAccidente, listarAccidentes } from './api.ts'
+import DetalleAccidenteDialog from './DetalleAccidenteDialog.tsx'
 import {
   COLOR_ESTADO,
   COLOR_GRAVEDAD,
@@ -29,7 +30,11 @@ import {
   ETIQUETA_ESTADO,
   ETIQUETA_GRAVEDAD,
 } from './estados.ts'
-import type { AccidenteAsegurador, EstadoAccidente } from './types.ts'
+import type {
+  AccidenteAsegurador,
+  ActualizarAccidenteDto,
+  EstadoAccidente,
+} from './types.ts'
 
 type FiltroEstado = EstadoAccidente | 'todos'
 
@@ -46,6 +51,8 @@ function AccidentesTabla() {
   const [intento, setIntento] = useState(0)
   const [estado, setEstado] = useState<FiltroEstado>('pendiente')
   const [busqueda, setBusqueda] = useState('')
+  // Accidente abierto en el detalle; se busca en la lista para ver los cambios
+  const [detalleId, setDetalleId] = useState<string | null>(null)
 
   const manejarError = useCallback(
     (err: unknown) => {
@@ -72,6 +79,26 @@ function AccidentesTabla() {
       vigente = false
     }
   }, [token, manejarError, intento])
+
+  // Un 401 cierra la sesión; cualquier error se relanza para que el diálogo
+  // muestre el mensaje sin cerrarse
+  async function guardarCambios(id: string, dto: ActualizarAccidenteDto) {
+    if (!token) return
+    try {
+      const actualizado = await actualizarAccidente(token, id, dto)
+      // Reemplaza la fila sin volver a pedir la lista
+      setAccidentes(
+        (lista) =>
+          lista?.map((a) => (a.id === actualizado.id ? actualizado : a)) ??
+          lista,
+      )
+    } catch (err) {
+      manejarSesionExpirada(err)
+      throw err
+    }
+  }
+
+  const detalle = accidentes?.find((a) => a.id === detalleId) ?? null
 
   const filtrados = useMemo(() => {
     if (!accidentes) return null
@@ -175,7 +202,7 @@ function AccidentesTabla() {
                   />
                 </TableCell>
                 <TableCell align="right">
-                  {/* Se conectan en los pasos 13 (Ver) y 14 (Eliminar) */}
+                  {/* Eliminar se conecta en el paso 14 */}
                   <Stack
                     direction="row"
                     spacing={1}
@@ -183,7 +210,7 @@ function AccidentesTabla() {
                   >
                     <Button
                       size="small"
-                      disabled
+                      onClick={() => setDetalleId(accidente.id)}
                       aria-label={`Ver el accidente de ${accidente.asegurado.nombre}`}
                     >
                       Ver
@@ -247,6 +274,14 @@ function AccidentesTabla() {
         />
       </Stack>
       {contenido()}
+      {detalle && (
+        <DetalleAccidenteDialog
+          key={detalle.id}
+          accidente={detalle}
+          onCerrar={() => setDetalleId(null)}
+          onGuardar={(dto) => guardarCambios(detalle.id, dto)}
+        />
+      )}
     </Box>
   )
 }
