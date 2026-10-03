@@ -21,8 +21,13 @@ import { useSesionExpirada } from '../auth/useSesionExpirada.ts'
 import { useAppSelector } from '../store/index.ts'
 import { formatearFechaHora } from '../utils/fechas.ts'
 import { normalizar } from '../utils/texto.ts'
-import { actualizarAccidente, listarAccidentes } from './api.ts'
+import {
+  actualizarAccidente,
+  eliminarAccidente,
+  listarAccidentes,
+} from './api.ts'
 import DetalleAccidenteDialog from './DetalleAccidenteDialog.tsx'
+import EliminarAccidenteDialog from './EliminarAccidenteDialog.tsx'
 import {
   COLOR_ESTADO,
   COLOR_GRAVEDAD,
@@ -53,6 +58,9 @@ function AccidentesTabla() {
   const [busqueda, setBusqueda] = useState('')
   // Accidente abierto en el detalle; se busca en la lista para ver los cambios
   const [detalleId, setDetalleId] = useState<string | null>(null)
+  const [porEliminar, setPorEliminar] = useState<AccidenteAsegurador | null>(
+    null,
+  )
 
   const manejarError = useCallback(
     (err: unknown) => {
@@ -92,6 +100,18 @@ function AccidentesTabla() {
           lista?.map((a) => (a.id === actualizado.id ? actualizado : a)) ??
           lista,
       )
+    } catch (err) {
+      manejarSesionExpirada(err)
+      throw err
+    }
+  }
+
+  async function eliminar(id: string) {
+    if (!token) return
+    try {
+      await eliminarAccidente(token, id)
+      // Quita la fila sin volver a pedir la lista
+      setAccidentes((lista) => lista?.filter((a) => a.id !== id) ?? lista)
     } catch (err) {
       manejarSesionExpirada(err)
       throw err
@@ -202,7 +222,6 @@ function AccidentesTabla() {
                   />
                 </TableCell>
                 <TableCell align="right">
-                  {/* Eliminar se conecta en el paso 14 */}
                   <Stack
                     direction="row"
                     spacing={1}
@@ -218,7 +237,7 @@ function AccidentesTabla() {
                     <Button
                       size="small"
                       color="error"
-                      disabled
+                      onClick={() => setPorEliminar(accidente)}
                       aria-label={`Eliminar el accidente de ${accidente.asegurado.nombre}`}
                     >
                       Eliminar
@@ -280,6 +299,13 @@ function AccidentesTabla() {
           accidente={detalle}
           onCerrar={() => setDetalleId(null)}
           onGuardar={(dto) => guardarCambios(detalle.id, dto)}
+        />
+      )}
+      {porEliminar && (
+        <EliminarAccidenteDialog
+          accidente={porEliminar}
+          onCerrar={() => setPorEliminar(null)}
+          onEliminar={eliminar}
         />
       )}
     </Box>
