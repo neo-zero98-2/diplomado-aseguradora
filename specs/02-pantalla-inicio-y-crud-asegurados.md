@@ -1,6 +1,6 @@
 # SPEC 02 — Pantalla de inicio y CRUD de asegurados para el asegurador
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01
 > **Date:** 2026-09-26
 > **Objective:** Reemplazar el placeholder de `/home` por la pantalla de inicio de la maqueta (encabezado, datos personales y botón 911) y dar al asegurador una ruta `/asegurados` con un CRUD de asegurados protegido por rol en el backend.
@@ -108,28 +108,28 @@ Conventions:
 
 ## Acceptance criteria
 
-- [ ] `GET /asegurados` sin header `Authorization` responde 401.
-- [ ] `GET /asegurados` con el token de un asegurado responde 403.
-- [ ] `GET /asegurados` con el token de un asegurador responde 200 con un arreglo de `Asegurado` ordenado por `nombre`.
-- [ ] `POST /asegurados` con datos válidos responde 201, y el nuevo asegurado puede iniciar sesión en `/login` con ese correo (o `idContrato`) y esa contraseña.
-- [ ] `POST /asegurados` con un `correo` o `idContrato` existente responde 409 y no deja una cuenta huérfana en `auth.users`.
-- [ ] `POST /asegurados` con `edad` no entera o `contrasena` de menos de 6 caracteres responde 400.
-- [ ] `PATCH /asegurados/:id` que cambia `correo` responde 200, y el asegurado puede iniciar sesión con el correo nuevo pero ya no con el anterior.
-- [ ] `PATCH /asegurados/:id` y `DELETE /asegurados/:id` con un id inexistente responden 404.
-- [ ] `DELETE /asegurados/:id` responde 204, y la cuenta ya no existe ni en `auth.users` ni en `asegurados`.
-- [ ] `/home` muestra el `AppBar` "Aseguradora", la tarjeta "Datos personales" con avatar de iniciales y el botón "Llamar al 911", con la disposición de `references/ui/pantalla inicio.png` (sin panel de chat).
-- [ ] Como asegurado, "Datos personales" muestra nombre, edad, idContrato, fecha de vencimiento, fecha de registro y correo.
-- [ ] Como asegurador, "Datos personales" muestra nombre, edad, idEmpleado y correo, y aparece el botón "Administrar asegurados".
-- [ ] "Llamar al 911" abre un diálogo de confirmación. "Cancelar" lo cierra sin navegar y "Llamar" navega a `tel:911`.
-- [ ] "Cerrar sesión" redirige a `/login`, borra la clave `uatx-sesion` de `localStorage`, y volver a `/home` redirige a `/login`.
-- [ ] Un asegurado que entra a `/asegurados` es redirigido a `/home`.
-- [ ] En `/asegurados`, escribir en la búsqueda filtra la tabla por nombre, correo o idContrato sin hacer peticiones nuevas.
-- [ ] Crear, editar y eliminar un asegurado desde la UI actualiza la tabla sin recargar la página.
-- [ ] Un 409 al guardar muestra el mensaje de error dentro del diálogo sin cerrarlo.
-- [ ] Con un access token inválido en `localStorage`, abrir `/asegurados` redirige a `/login` con el aviso "Tu sesión expiró".
-- [ ] Las pruebas de Vitest de `AseguradorGuard` y `AseguradosService` pasan con `npm test`.
-- [ ] `/home` y `/asegurados` se revisaron con Playwright para ambos roles, sin errores en la consola.
-- [ ] `npm run lint` y `npm run build` pasan sin errores en `back-uatx-crud` y en `front-uatx-crud`.
+- [x] `GET /asegurados` sin header `Authorization` responde 401.
+- [x] `GET /asegurados` con el token de un asegurado responde 403.
+- [x] `GET /asegurados` con el token de un asegurador responde 200 con un arreglo de `Asegurado` ordenado por `nombre`.
+- [x] `POST /asegurados` con datos válidos responde 201, y el nuevo asegurado puede iniciar sesión en `/login` con ese correo (o `idContrato`) y esa contraseña.
+- [x] `POST /asegurados` con un `correo` o `idContrato` existente responde 409 y no deja una cuenta huérfana en `auth.users`.
+- [x] `POST /asegurados` con `edad` no entera o `contrasena` de menos de 6 caracteres responde 400.
+- [x] `PATCH /asegurados/:id` que cambia `correo` responde 200, y el asegurado puede iniciar sesión con el correo nuevo pero ya no con el anterior.
+- [x] `PATCH /asegurados/:id` y `DELETE /asegurados/:id` con un id inexistente responden 404.
+- [x] `DELETE /asegurados/:id` responde 204, y la cuenta ya no existe ni en `auth.users` ni en `asegurados`.
+- [x] `/home` muestra el `AppBar` "Aseguradora", la tarjeta "Datos personales" con avatar de iniciales y el botón "Llamar al 911", con la disposición de `references/ui/pantalla inicio.png` (sin panel de chat).
+- [x] Como asegurado, "Datos personales" muestra nombre, edad, idContrato, fecha de vencimiento, fecha de registro y correo.
+- [x] Como asegurador, "Datos personales" muestra nombre, edad, idEmpleado y correo, y aparece el botón "Administrar asegurados".
+- [x] "Llamar al 911" abre un diálogo de confirmación. "Cancelar" lo cierra sin navegar y "Llamar" navega a `tel:911`.
+- [x] "Cerrar sesión" redirige a `/login`, borra la clave `uatx-sesion` de `localStorage`, y volver a `/home` redirige a `/login`.
+- [x] Un asegurado que entra a `/asegurados` es redirigido a `/home`.
+- [x] En `/asegurados`, escribir en la búsqueda filtra la tabla por nombre, correo o idContrato sin hacer peticiones nuevas.
+- [x] Crear, editar y eliminar un asegurado desde la UI actualiza la tabla sin recargar la página.
+- [x] Un 409 al guardar muestra el mensaje de error dentro del diálogo sin cerrarlo.
+- [x] Con un access token inválido en `localStorage`, abrir `/asegurados` redirige a `/login` con el aviso "Tu sesión expiró".
+- [x] Las pruebas de Vitest de `AseguradorGuard` y `AseguradosService` pasan con `npm test`.
+- [x] `/home` y `/asegurados` se revisaron con Playwright para ambos roles, sin errores en la consola.
+- [x] `npm run lint` y `npm run build` pasan sin errores en `back-uatx-crud` y en `front-uatx-crud`.
 
 ## Decisions
 
